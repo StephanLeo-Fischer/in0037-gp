@@ -43,7 +43,9 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 {
 	switch (m_iTestCase)
 	{
-	case 0: break;
+	case 0: 
+		DUC->drawSphere(Vec3(1,1,1), Vec3(1,1,1));
+		break;
 	case 1: break;
 	case 2: break;
 	}
@@ -55,15 +57,15 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 	switch (m_iTestCase)
 	{
 	case 0:
-		cout << "Test Case 1!\n";
+		cout << "Test Case 1: Euler!\n";
 
 		break;
 	case 1:
-		cout << "Test Case 2!\n";
+		cout << "Test Case 2: Leapfrog!\n";
 
 		break;
 	case 2:
-		cout << "Test Case 3!\n";
+		cout << "Test Case 3 Midpoint!\n";
 		break;
 	default:
 		cout << "Empty Test!\n";
@@ -98,8 +100,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{// handling different cases
-	case 0:
-		// Euler timestep
+	case 0: // Euler timestep
 		/*m_vfRotate.x += timeStep;
 		if (m_vfRotate.x > 2 * M_PI) m_vfRotate.x -= 2.0f * (float)M_PI;
 		m_vfRotate.y += timeStep;
