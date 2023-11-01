@@ -1,6 +1,7 @@
 #ifndef MASSSPRINGSYSTEMSIMULATOR_h
 #define MASSSPRINGSYSTEMSIMULATOR_h
 #include "Simulator.h"
+#include <map>
 
 // Do Not Change
 #define EULER 0
@@ -13,10 +14,10 @@ class MassSpringSystemSimulator:public Simulator{
 public:
 	// Construtors
 	MassSpringSystemSimulator();
-	
+
 	// UI Functions
-	const char * getTestCasesStr();
-	void initUI(DrawingUtilitiesClass * DUC);
+	const char* getTestCasesStr();
+	void initUI(DrawingUtilitiesClass* DUC);
 	void reset();
 	void drawFrame(ID3D11DeviceContext* pd3dImmediateContext);
 	void notifyCaseChanged(int testCase);
@@ -36,7 +37,7 @@ public:
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
 	void applyExternalForce(Vec3 force);
-	
+
 	// Do Not Change
 	void setIntegrator(int integrator) {
 		m_iIntegrator = integrator;
@@ -54,5 +55,25 @@ private:
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
+
+	// Stephan's additional Attributes
+	struct Point {
+		Vec3 m_vPosition;
+		Vec3 m_vVelocity;
+		Vec3 m_vAcceleration;
+		Vec3 m_vForce;
+		bool m_bFixed;
+		float m_fMass = 10;
+	};
+
+	struct Spring {
+		pair<int, int> m_pPoints;
+		float m_fInitialLength;
+		float m_fStiffness;
+		float m_fDamping;
+	};
+
+	vector<Point> m_vPoints;
+	vector<Spring> m_vSprings;
 };
 #endif
