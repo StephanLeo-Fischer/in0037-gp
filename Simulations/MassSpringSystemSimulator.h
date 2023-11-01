@@ -36,6 +36,8 @@ public:
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
 	void applyExternalForce(Vec3 force);
+
+	//Vec3 calculatePosAfterEuler(Vec3 curPos, Vec3 curVelocity, float mass, Vec3 springForce);
 	
 	// Do Not Change
 	void setIntegrator(int integrator) {

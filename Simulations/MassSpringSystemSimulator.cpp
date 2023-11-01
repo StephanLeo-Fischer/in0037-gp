@@ -10,9 +10,22 @@ MassSpringSystemSimulator::MassSpringSystemSimulator()
 
 	// UI Attributes
 	m_externalForce;
-	m_mouse;
-	m_trackmouse;
-	m_oldtrackmouse;
+	m_mouse = Point2D();
+	m_trackmouse = Point2D();
+	m_oldtrackmouse = Point2D();
+}
+
+void MassSpringSystemSimulator::onClick(int x, int y)
+{
+	m_trackmouse.x = x;
+	m_trackmouse.y = y;
+}
+void MassSpringSystemSimulator::onMouse(int x, int y)
+{
+	m_oldtrackmouse.x = x;
+	m_oldtrackmouse.y = y;
+	m_trackmouse.x = x;
+	m_trackmouse.y = y;
 }
 
 const char* MassSpringSystemSimulator::getTestCasesStr()
