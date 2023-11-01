@@ -75,5 +75,9 @@ private:
 
 	vector<Point> m_vPoints;
 	vector<Spring> m_vSprings;
+
+	float scale = .005;
+	Vec3 size_of_ball = Vec3(scale);
+	void initTable1();
 };
 #endif

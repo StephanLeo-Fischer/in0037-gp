@@ -26,7 +26,18 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	this->DUC = DUC;
 	switch (m_iTestCase)
 	{
-	case 0:break;
+	case 0:
+		TwAddVarRW(DUC->g_pTweakBar, "Mass p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_fMass, "min=1 max=100");
+		TwAddVarRW(DUC->g_pTweakBar, "pos.x p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_vPosition.x, "min=-100 max=100");
+		TwAddVarRW(DUC->g_pTweakBar, "pos.y p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_vPosition.y, "min=-100 max=100");
+		TwAddVarRW(DUC->g_pTweakBar, "pos.z p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_vPosition.z, "min=-100 max=100");
+
+		TwAddVarRW(DUC->g_pTweakBar, "Mass p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_fMass, "min=1 max=100");
+		TwAddVarRW(DUC->g_pTweakBar, "pos.x p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_vPosition.x, "min=-100 max=100");
+		TwAddVarRW(DUC->g_pTweakBar, "pos.y p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_vPosition.y, "min=-100 max=100");
+		TwAddVarRW(DUC->g_pTweakBar, "pos.z p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_vPosition.z, "min=-100 max=100");
+
+		break;
 	case 1:break;
 	case 2:break;
 	default:break;
@@ -42,20 +53,19 @@ void MassSpringSystemSimulator::reset()
 
 void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
-	auto size_of_ball = Vec3(.01, .01, .01);
+	Vec3 white = Vec3(1, 1, 1);
+	Vec3 red = Vec3(1, 0, 0);
 	switch (m_iTestCase)
 	{
 	case 0: 
-		addSpring(
-			addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false),
-			addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false),
-			1);
-		m_vPoints.at(0).m_fMass = 40;
-		m_vPoints.at(1).m_fMass = 40;
-		setDampingFactor(0);
-
 		for (int i = 0; i < getNumberOfMassPoints(); ++i) {
-			DUC->drawSphere(getPositionOfMassPoint(i), size_of_ball*m_vPoints.at(i).m_fMass);
+			DUC->drawSphere(getPositionOfMassPoint(i), size_of_ball * m_vPoints.at(i).m_fMass);
+		}
+		for (int i = 0; i < getNumberOfSprings(); ++i) {
+			int point1_idx = m_vSprings.at(i).m_pPoints.first;
+			int point2_idx = m_vSprings.at(i).m_pPoints.second;
+			//does not work
+			//DUC->drawLine(m_vPoints.at(point1_idx).m_vPosition, white, m_vPoints.at(point2_idx).m_vPosition, red);
 		}
 		break;
 	case 1: break;
@@ -70,14 +80,14 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 	{
 	case 0:
 		cout << "Test Case 1: Euler!\n";
-
+		initTable1();
 		break;
 	case 1:
 		cout << "Test Case 2: Leapfrog!\n";
 
 		break;
 	case 2:
-		cout << "Test Case 3 Midpoint!\n";
+		cout << "Test Case 3: Midpoint!\n";
 		break;
 	default:
 		cout << "Empty Test!\n";
@@ -113,13 +123,9 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase)
 	{
 	case 0: // Euler timestep
-		//m_vfRotate.x += timeStep;
-		//if (m_vfRotate.x > 2 * M_PI) m_vfRotate.x -= 2.0f * (float)M_PI;
-		//m_vfRotate.y += timeStep;
-		//if (m_vfRotate.y > 2 * M_PI) m_vfRotate.y -= 2.0f * (float)M_PI;
-		//m_vfRotate.z += timeStep;
-		//if (m_vfRotate.z > 2 * M_PI) m_vfRotate.z -= 2.0f * (float)M_PI;
-
+		for (auto p : m_vPoints){
+			p.m_vPosition.x += timeStep;
+		}
 		break;
 	default:
 		break;
@@ -164,7 +170,7 @@ int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 Velocity, bool i
 	point.m_vForce = 0;
 	point.m_bFixed = isFixed;
 	m_vPoints.push_back(point);
-	return m_vPoints.size();
+	return m_vPoints.size()-1;
 }
 
 void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float initialLength)
@@ -200,4 +206,17 @@ Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
 
 void MassSpringSystemSimulator::applyExternalForce(Vec3 force)
 {
+}
+
+void MassSpringSystemSimulator::initTable1()
+{
+	m_vPoints.clear();
+	m_vSprings.clear();
+	addSpring(
+		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false),
+		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false),
+		1);
+	m_vPoints.at(0).m_fMass = 40;
+	m_vPoints.at(1).m_fMass = 40;
+	setDampingFactor(0);
 }
