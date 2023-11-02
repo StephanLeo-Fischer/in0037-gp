@@ -123,7 +123,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase)
 	{
 	case 0: // Euler timestep
-		for (auto p : m_vPoints){
+		for (auto &p : m_vPoints){
 			p.m_vPosition.x += timeStep;
 		}
 		break;
