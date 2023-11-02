@@ -27,7 +27,7 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	switch (m_iTestCase)
 	{
 	case 0:
-		TwAddVarRW(DUC->g_pTweakBar, "Mass p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_fMass, "min=1 max=100");
+		/*TwAddVarRW(DUC->g_pTweakBar, "Mass p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_fMass, "min=1 max=100");
 		TwAddVarRW(DUC->g_pTweakBar, "pos.x p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_vPosition.x, "min=-100 max=100");
 		TwAddVarRW(DUC->g_pTweakBar, "pos.y p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_vPosition.y, "min=-100 max=100");
 		TwAddVarRW(DUC->g_pTweakBar, "pos.z p_0", TW_TYPE_FLOAT, &m_vPoints[0].m_vPosition.z, "min=-100 max=100");
@@ -35,7 +35,7 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		TwAddVarRW(DUC->g_pTweakBar, "Mass p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_fMass, "min=1 max=100");
 		TwAddVarRW(DUC->g_pTweakBar, "pos.x p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_vPosition.x, "min=-100 max=100");
 		TwAddVarRW(DUC->g_pTweakBar, "pos.y p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_vPosition.y, "min=-100 max=100");
-		TwAddVarRW(DUC->g_pTweakBar, "pos.z p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_vPosition.z, "min=-100 max=100");
+		TwAddVarRW(DUC->g_pTweakBar, "pos.z p_1", TW_TYPE_FLOAT, &m_vPoints[1].m_vPosition.z, "min=-100 max=100");*/
 
 		break;
 	case 1:break;
@@ -123,8 +123,31 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase)
 	{
 	case 0: // Euler timestep
+		for (auto& s : m_vSprings){
+			Point &p1 = m_vPoints.at(s.m_pPoints.first);
+			Point &p2 = m_vPoints.at(s.m_pPoints.second);
+			Vec3 &pos1 = p1.m_vPosition;
+			Vec3 &pos2 = p2.m_vPosition;
+			Vec3 diff = pos1 - pos2;
+			float length = sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+			Vec3 diff_normalized = diff / length;
+
+			p1.m_vForce = -s.m_fStiffness * (length - s.m_fInitialLength) * diff_normalized;
+			p2.m_vForce = -s.m_fStiffness * (length - s.m_fInitialLength) * -diff_normalized;
+		}
+
 		for (auto &p : m_vPoints){
-			p.m_vPosition.x += timeStep;
+			p.m_vAcceleration.x = p.m_vForce.x / p.m_fMass;
+			p.m_vAcceleration.y = p.m_vForce.y / p.m_fMass;
+			p.m_vAcceleration.z = p.m_vForce.z / p.m_fMass;
+
+			p.m_vVelocity.x += timeStep * p.m_vAcceleration.x;
+			p.m_vVelocity.y += timeStep * p.m_vAcceleration.y;
+			p.m_vVelocity.z += timeStep * p.m_vAcceleration.z;
+
+			p.m_vPosition.x += timeStep * p.m_vVelocity.x;
+			p.m_vPosition.y += timeStep * p.m_vVelocity.y;
+			p.m_vPosition.z += timeStep * p.m_vVelocity.z;
 		}
 		break;
 	default:
