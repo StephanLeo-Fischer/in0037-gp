@@ -77,13 +77,17 @@ private:
 	vector<Spring> m_vSprings;
 	vector<Point> m_vPoints_euler;
 	vector<Point> m_vPoints_midpoint;
+	vector<Point>* m_vPoints= &m_vPoints_euler;
 
-	float scale = .005;
+	float scale = .01;
 	Vec3 size_of_ball = Vec3(scale);
-	const float m_fMaxForce = 10; // for DrawLine (red color)
 	bool executed = false;
+	bool m_bModeEuler = true;
+	bool m_bModeMidpoint = false;
+	int m_iNumberOfWantedMasspoints = 10;
 	
 	void initTable1();
+	void initDemo4();
 	float distance_normalized(Point p1, Point p2);
 	void timestep_euler(float timeStep);
 	void timestep_midpoint(float timeStep);
