@@ -9,19 +9,19 @@
 // Do Not Change
 
 
-class MassSpringSystemSimulator:public Simulator{
+class MassSpringSystemSimulator :public Simulator {
 public:
 	// Construtors
 	MassSpringSystemSimulator();
-	
+
 	// UI Functions
-	const char * getTestCasesStr();
-	void initUI(DrawingUtilitiesClass * DUC);
+	const char* getTestCasesStr();
+	void initUI(DrawingUtilitiesClass* DUC);
 	void reset();
 	void drawFrame(ID3D11DeviceContext* pd3dImmediateContext);
 	void notifyCaseChanged(int testCase);
 	void externalForcesCalculations(float timeElapsed);
-	void simulateTimestep(float timeStep);
+	void simulateTimestep(float timestep);
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
@@ -36,7 +36,7 @@ public:
 	Vec3 getPositionOfMassPoint(int index);
 	Vec3 getVelocityOfMassPoint(int index);
 	void applyExternalForce(Vec3 force);
-	
+
 	// Do Not Change
 	void setIntegrator(int integrator) {
 		m_iIntegrator = integrator;
@@ -54,5 +54,38 @@ private:
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
+
+	struct Point {
+		Vec3 m_vPosition;
+		Vec3 m_vVelocity;
+		Vec3 m_vForce;
+		bool m_bFixed;
+
+		Point(Vec3 position, Vec3 velocity, bool isFixed) :
+			m_vPosition(position),
+			m_vVelocity(velocity),
+			m_vForce(0.0),
+			m_bFixed(isFixed) {}
+	};
+
+	struct Spring {
+		int point1;
+		int point2;
+		float m_fInitialLength;
+
+		Spring(int point1, int point2, float initialLength) :
+			point1(point1),
+			point2(point2),
+			m_fInitialLength(initialLength) {}
+	};
+
+	vector<Spring> m_vSprings;
+	vector<Point> m_vPoints;
+
+	// Sum of the forces applied to all the mass points:
+	Vec3 m_vExternalForce;
+
+	void timestepEuler(float timestep);
+	void timestepMidpoint(float timestep);
 };
 #endif

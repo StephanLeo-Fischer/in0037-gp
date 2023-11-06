@@ -25,9 +25,9 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	this->DUC = DUC;
 	switch (m_iTestCase)
 	{
-	case 0:break;
-	case 1:break;
-	case 2:break;
+	case EULER:break;
+	case LEAPFROG:break;
+	case MIDPOINT:break;
 	default:break;
 	}
 }
@@ -43,9 +43,9 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 {
 	switch (m_iTestCase)
 	{
-	case 0: break;
-	case 1: break;
-	case 2: break;
+	case EULER: break;
+	case LEAPFROG: break;
+	case MIDPOINT: break;
 	}
 }
 
@@ -54,17 +54,18 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 	m_iTestCase = testCase;
 	switch (m_iTestCase)
 	{
-	case 0:
-		cout << "Test Case 1!\n";
+	case EULER:
+		cout << "Test Case Euler!\n";
+		break;
 
+	case LEAPFROG:
+		cout << "Test Case Leapfrog!\n";
 		break;
-	case 1:
-		cout << "Test Case 2!\n";
 
+	case MIDPOINT:
+		cout << "Test Case Midpoint!\n";
 		break;
-	case 2:
-		cout << "Test Case 3!\n";
-		break;
+
 	default:
 		cout << "Empty Test!\n";
 		break;
@@ -93,22 +94,125 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
 	}
 }
 
-void MassSpringSystemSimulator::simulateTimestep(float timeStep)
+void MassSpringSystemSimulator::simulateTimestep(float timestep)
 {
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{// handling different cases
-	case 0:
-		// Euler timestep
-		/*m_vfRotate.x += timeStep;
-		if (m_vfRotate.x > 2 * M_PI) m_vfRotate.x -= 2.0f * (float)M_PI;
-		m_vfRotate.y += timeStep;
-		if (m_vfRotate.y > 2 * M_PI) m_vfRotate.y -= 2.0f * (float)M_PI;
-		m_vfRotate.z += timeStep;
-		if (m_vfRotate.z > 2 * M_PI) m_vfRotate.z -= 2.0f * (float)M_PI;*/
-
+	case EULER:
+		timestepEuler(timestep);
 		break;
+
+	case LEAPFROG:
+		break;
+
+	case MIDPOINT:
+		timestepMidpoint(timestep);
+		break;
+
 	default:
 		break;
 	}
+}
+
+void MassSpringSystemSimulator::timestepEuler(float timestep)
+{
+	// The force applied to each mass point is initialised to the externalForce:
+	for (auto& p : m_vPoints) {
+		p.m_vForce = m_vExternalForce;
+	}
+
+	// Add the force of the springs to the mass points:
+	for (auto& s : m_vSprings) {
+		Point& p1 = m_vPoints.at(s.point1);
+		Point& p2 = m_vPoints.at(s.point2);
+
+		// Vector from p1 to p2:
+		Vec3 v = p2.m_vPosition - p1.m_vPosition;
+		float distance = norm(v);
+
+		// Compute the force applied by the spring to p1:
+		Vec3 force = m_fStiffness * (distance - s.m_fInitialLength) * v / distance;
+
+		p1.m_vForce += force;
+		p2.m_vForce -= force;
+	}
+
+	// Update the points speed and position:
+	for (auto& p : m_vPoints) {
+		if (p.m_bFixed) {
+			p.m_vVelocity = 0;
+		}
+		else {
+			p.m_vForce -= p.m_vVelocity * m_fDamping;
+			p.m_vPosition += timestep * p.m_vVelocity;
+			p.m_vVelocity += timestep * p.m_vForce / m_fMass;
+		}
+	}
+}
+
+void MassSpringSystemSimulator::timestepMidpoint(float timestep)
+{
+
+}
+
+void MassSpringSystemSimulator::onClick(int x, int y)
+{
+}
+
+void MassSpringSystemSimulator::onMouse(int x, int y)
+{
+}
+
+void MassSpringSystemSimulator::setMass(float mass)
+{
+	m_fMass = mass;
+}
+
+void MassSpringSystemSimulator::setStiffness(float stiffness)
+{
+	m_fStiffness = stiffness;
+}
+
+void MassSpringSystemSimulator::setDampingFactor(float damping)
+{
+	m_fDamping = damping;
+}
+
+// Create a new mass point, add it to the list of points, and return the index of the point:
+int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 velocity, bool isFixed)
+{
+	m_vPoints.push_back(Point(position, velocity, isFixed));
+	return m_vPoints.size() - 1;
+}
+
+// Create a new spring between two points, with the given inital length:
+void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float initialLength)
+{
+	m_vSprings.push_back(Spring(masspoint1, masspoint1, initialLength));
+}
+
+int MassSpringSystemSimulator::getNumberOfMassPoints()
+{
+	return m_vPoints.size();
+}
+
+int MassSpringSystemSimulator::getNumberOfSprings()
+{
+	return m_vSprings.size();
+}
+
+Vec3 MassSpringSystemSimulator::getPositionOfMassPoint(int index)
+{
+	return m_vPoints.at(index).m_vPosition;
+}
+
+Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
+{
+	return m_vPoints.at(index).m_vVelocity;
+}
+
+void MassSpringSystemSimulator::applyExternalForce(Vec3 force)
+{
+	m_vExternalForce += force;
 }
