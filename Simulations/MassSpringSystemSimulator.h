@@ -42,8 +42,8 @@ public:
 
 	//Vec3 calculatePosAfterEuler(Vec3 curPos, Vec3 curVelocity, float mass, Vec3 springForce);
 
+	void initDemo1();
 
-	
 	// Do Not Change
 	void setIntegrator(int integrator) {
 		m_iIntegrator = integrator;

@@ -7,6 +7,8 @@ public:
     Point(Vec3 pos, Vec3 vel, Vec3 acc, Vec3 force, float mass, bool isFixed);
 
     Vec3 getPosition();
+    Vec3 getVelocity();
+    std::string to_string();
 
 private:
     // vars

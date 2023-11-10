@@ -70,6 +70,7 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 	{
 	case 0:
 		cout << "Test Case 1!\n";
+		initDemo1();
 
 		break;
 	case 1:
@@ -107,6 +108,15 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
 	}
 }
 
+void MassSpringSystemSimulator::setMass(float mass) {
+	m_fMass = mass;
+}
+void MassSpringSystemSimulator::setStiffness(float stiffness) {
+	m_fStiffness = stiffness;
+}
+void MassSpringSystemSimulator::setDampingFactor(float damping) {
+	m_fDamping = damping;
+}
 
 int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 velocity, bool isFixed) {
 	Point point{ position, velocity, Vec3(), Vec3(), m_fMass, isFixed};
@@ -126,17 +136,29 @@ Vec3 MassSpringSystemSimulator::getPositionOfMassPoint(int index) {
 	return (*pointsFront).getPosition();
 }
 
+Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
+{
+	// help from https://stackoverflow.com/questions/16747591/how-to-get-an-element-at-specified-index-from-c-list
+	auto pointsFront = _points.begin();
+	std::advance(pointsFront, index);
+	return (*pointsFront).getVelocity();
+}
+
+void MassSpringSystemSimulator::initDemo1() 
+{
+	addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+	addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+}
 
 void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 {
+	int i = 0;  // index des jeweiligen punktes
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{// handling different cases
 	case 0:  // Euler timestep
-		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
-		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
 		for (Point point : _points) {
-			printf("%s", point.getPosition().toString());
+			std::cout << i++ << '\t' << ("%s", point.to_string());
 		}
 
 		/*m_vfRotate.x += timeStep;
@@ -145,7 +167,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		if (m_vfRotate.y > 2 * M_PI) m_vfRotate.y -= 2.0f * (float)M_PI;
 		m_vfRotate.z += timeStep;
 		if (m_vfRotate.z > 2 * M_PI) m_vfRotate.z -= 2.0f * (float)M_PI;*/
-
+		
 		break;
 	case 1:  // midpoint
 		break;
