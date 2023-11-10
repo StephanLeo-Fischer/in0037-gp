@@ -4,6 +4,7 @@
 #include<list>
 #include<iterator>
 #include "Point.h"
+#include "Spring.h"
 
 // Do Not Change
 #define EULER 0
@@ -57,6 +58,7 @@ private:
 	int m_iIntegrator;
 
 	std::list<Point> _points;
+	std::list<Spring> _springs;
 
 	// UI Attributes
 	Vec3 m_externalForce;

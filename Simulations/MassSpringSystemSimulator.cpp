@@ -119,13 +119,23 @@ void MassSpringSystemSimulator::setDampingFactor(float damping) {
 }
 
 int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 velocity, bool isFixed) {
-	Point point{ position, velocity, Vec3(), Vec3(), m_fMass, isFixed};
+	Point point{ position, velocity, Vec3(), Vec3(), m_fMass, isFixed };
 	_points.push_back(point);  // adding it to list of all points
-	return _points.size() - 1;  // TODO: was solls zurückgeben? vll den index in der Liste?
+	return _points.size() - 1;  // gibt index in / größe der Liste zurück 
+}
+
+
+void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float initialLength) {
+	Spring spring{ masspoint1, masspoint2, initialLength, m_fStiffness, m_fDamping };
+	_springs.push_back(spring);  // adding it to list of all springs
 }
 
 int MassSpringSystemSimulator::getNumberOfMassPoints() {
 	return _points.size();
+}
+
+int MassSpringSystemSimulator::getNumberOfSprings() {
+	return _springs.size();
 }
 
 
@@ -146,8 +156,12 @@ Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
 
 void MassSpringSystemSimulator::initDemo1() 
 {
-	addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
-	addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+	setMass(10);
+	setStiffness(40);
+	setDampingFactor(1);  // 1 sollte nichts dampen
+	int p1 = addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+	int p2 = addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+	addSpring(p1, p2, 1);
 }
 
 void MassSpringSystemSimulator::simulateTimestep(float timeStep)
