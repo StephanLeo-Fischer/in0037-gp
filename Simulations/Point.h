@@ -7,6 +7,7 @@ public:
     Point(Vec3 pos, Vec3 vel, Vec3 acc, Vec3 force, float mass, bool isFixed);
 
     Vec3 getPosition();
+
 private:
     // vars
     Vec3 _pos;

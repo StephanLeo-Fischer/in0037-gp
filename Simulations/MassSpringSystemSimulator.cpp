@@ -111,10 +111,11 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
 int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 velocity, bool isFixed) {
 	Point point{ position, velocity, Vec3(), Vec3(), m_fMass, isFixed};
 	_points.push_back(point);  // adding it to list of all points
+	return _points.size() - 1;  // TODO: was solls zurückgeben? vll den index in der Liste?
 }
 
 int MassSpringSystemSimulator::getNumberOfMassPoints() {
-	_points.size();
+	return _points.size();
 }
 
 
@@ -132,7 +133,11 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase)
 	{// handling different cases
 	case 0:  // Euler timestep
-
+		addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
+		addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
+		for (Point point : _points) {
+			printf("%s", point.getPosition().toString());
+		}
 
 		/*m_vfRotate.x += timeStep;
 		if (m_vfRotate.x > 2 * M_PI) m_vfRotate.x -= 2.0f * (float)M_PI;
