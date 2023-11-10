@@ -1,6 +1,9 @@
 #ifndef MASSSPRINGSYSTEMSIMULATOR_h
 #define MASSSPRINGSYSTEMSIMULATOR_h
 #include "Simulator.h"
+#include<list>
+#include<iterator>
+#include "Point.h"
 
 // Do Not Change
 #define EULER 0
@@ -29,7 +32,7 @@ public:
 	void setMass(float mass);
 	void setStiffness(float stiffness);
 	void setDampingFactor(float damping);
-	int addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed);
+	int addMassPoint(Vec3 position, Vec3 velocity, bool isFixed);
 	void addSpring(int masspoint1, int masspoint2, float initialLength);
 	int getNumberOfMassPoints();
 	int getNumberOfSprings();
@@ -38,6 +41,8 @@ public:
 	void applyExternalForce(Vec3 force);
 
 	//Vec3 calculatePosAfterEuler(Vec3 curPos, Vec3 curVelocity, float mass, Vec3 springForce);
+
+
 	
 	// Do Not Change
 	void setIntegrator(int integrator) {
@@ -50,6 +55,8 @@ private:
 	float m_fStiffness;
 	float m_fDamping;
 	int m_iIntegrator;
+
+	std::list<Point> _points;
 
 	// UI Attributes
 	Vec3 m_externalForce;

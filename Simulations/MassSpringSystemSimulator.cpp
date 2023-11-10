@@ -1,5 +1,6 @@
 #include "MassSpringSystemSimulator.h"
 
+
 MassSpringSystemSimulator::MassSpringSystemSimulator()
 {
 	// Data Attributes
@@ -106,13 +107,33 @@ void MassSpringSystemSimulator::externalForcesCalculations(float timeElapsed)
 	}
 }
 
+
+int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 velocity, bool isFixed) {
+	Point point{ position, velocity, Vec3(), Vec3(), m_fMass, isFixed};
+	_points.push_back(point);  // adding it to list of all points
+}
+
+int MassSpringSystemSimulator::getNumberOfMassPoints() {
+	_points.size();
+}
+
+
+Vec3 MassSpringSystemSimulator::getPositionOfMassPoint(int index) {
+	// help from https://stackoverflow.com/questions/16747591/how-to-get-an-element-at-specified-index-from-c-list
+	auto pointsFront = _points.begin();
+	std::advance(pointsFront, index);
+	return (*pointsFront).getPosition();
+}
+
+
 void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 {
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{// handling different cases
-	case 0:
-		// Euler timestep
+	case 0:  // Euler timestep
+
+
 		/*m_vfRotate.x += timeStep;
 		if (m_vfRotate.x > 2 * M_PI) m_vfRotate.x -= 2.0f * (float)M_PI;
 		m_vfRotate.y += timeStep;
@@ -120,6 +141,10 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		m_vfRotate.z += timeStep;
 		if (m_vfRotate.z > 2 * M_PI) m_vfRotate.z -= 2.0f * (float)M_PI;*/
 
+		break;
+	case 1:  // midpoint
+		break;
+	case 2:  // leapfrog
 		break;
 	default:
 		break;
