@@ -7,6 +7,9 @@ public:
     // Constructor
     Spring(int firstConnectedPoint, int secondedConnectedPoint, float initialLength, float stiffness, float damping);
 
+    int getIndexFirstConnectedPoint();
+    int getIndexSecondConnectedPoint();
+
 private:
     // vars
     int _firstConnectedPoint;

@@ -8,4 +8,13 @@ Spring::Spring(int firstConnectedPoint, int secondedConnectedPoint, float initia
     _damping = damping;
 }
 
+int Spring::getIndexFirstConnectedPoint()
+{
+    return _firstConnectedPoint;
+}
+
+int Spring::getIndexSecondConnectedPoint()
+{
+    return _secondedConnectedPoint;
+}
 

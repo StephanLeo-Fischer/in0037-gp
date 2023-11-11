@@ -59,6 +59,7 @@ private:
 
 	std::list<Point> _points;
 	std::list<Spring> _springs;
+	bool _frameElapsed = false;
 
 	// UI Attributes
 	Vec3 m_externalForce;
