@@ -18,3 +18,8 @@ int Spring::getIndexSecondConnectedPoint()
     return _secondedConnectedPoint;
 }
 
+float Spring::getInitialLength()
+{
+    return _initialLength;
+}
+

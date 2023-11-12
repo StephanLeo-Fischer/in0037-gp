@@ -8,9 +8,13 @@ public:
 
     Vec3 getPosition();
     Vec3 getVelocity();
+    void setForce(Vec3 force);
+    void setAcceleration(Vec3 acc);
+    void setVelocity(Vec3 vel);
+    void setPosition(Vec3 pos);
     std::string to_string();
 
-private:
+//private: //nvmd ich muss eh alle getten und setten
     // vars
     Vec3 _pos;
     Vec3 _vel;

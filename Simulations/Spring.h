@@ -9,6 +9,7 @@ public:
 
     int getIndexFirstConnectedPoint();
     int getIndexSecondConnectedPoint();
+    float getInitialLength();
 
 private:
     // vars

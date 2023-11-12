@@ -155,19 +155,22 @@ int MassSpringSystemSimulator::getNumberOfSprings() {
 }
 
 
-Vec3 MassSpringSystemSimulator::getPositionOfMassPoint(int index) {
-	// help from https://stackoverflow.com/questions/16747591/how-to-get-an-element-at-specified-index-from-c-list
-	auto pointsFront = _points.begin();
-	std::advance(pointsFront, index);
-	return (*pointsFront).getPosition();
+Vec3 MassSpringSystemSimulator::getPositionOfMassPoint(int index) 
+{
+	return getElementAtIndex(_points, index).getPosition();
 }
 
 Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
 {
+	return getElementAtIndex(_points, index).getVelocity();
+}
+
+template <typename T>  // template T: https://www.geeksforgeeks.org/templates-cpp/
+T getElementAtIndex(std::list<T> list, int index) {
 	// help from https://stackoverflow.com/questions/16747591/how-to-get-an-element-at-specified-index-from-c-list
-	auto pointsFront = _points.begin();
-	std::advance(pointsFront, index);
-	return (*pointsFront).getVelocity();
+	auto front = list.begin();
+	std::advance(front, index);
+	return (*front);
 }
 
 void MassSpringSystemSimulator::initDemo1() 
@@ -187,16 +190,33 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase)
 	{// handling different cases
 	case 0:  // Euler timestep
-		for (Point point : _points) {
-			//std::cout << i++ << '\t' << ("%s", point.to_string());
+		// get forces from springs
+		for (Spring spring : _springs) {
+			Point p1 = getElementAtIndex(_points, spring.getIndexFirstConnectedPoint());
+			Point p2 = getElementAtIndex(_points, spring.getIndexSecondConnectedPoint());
+
+			// hooke's law: -k * (l - L) * normalizedDirection
+			// l distance
+			Vec3 p1Pos = p1.getPosition();
+			Vec3 p2Pos = p2.getPosition();
+			float l = sqrt(pow(p1Pos.x - p2Pos.x, 2) + pow(p1Pos.y - p2Pos.y, 2) + pow(p1Pos.z - p2Pos.z, 2));
+			std::cout << '\n' << l << " current length\n";
+			Vec3 dir = p2Pos - p1Pos;
+			Vec3 p1Force = -m_fStiffness * (l - spring.getInitialLength()) * (dir / l);
+
+			p1.setForce(p1Force);  // wenn man mehr springs hat, werden die werte aber überschrieben. TODO
+			p2.setForce(-p1Force);  // trick 17
 		}
 
-		/*m_vfRotate.x += timeStep;
-		if (m_vfRotate.x > 2 * M_PI) m_vfRotate.x -= 2.0f * (float)M_PI;
-		m_vfRotate.y += timeStep;
-		if (m_vfRotate.y > 2 * M_PI) m_vfRotate.y -= 2.0f * (float)M_PI;
-		m_vfRotate.z += timeStep;
-		if (m_vfRotate.z > 2 * M_PI) m_vfRotate.z -= 2.0f * (float)M_PI;*/
+		// apply forces to masses
+		for (Point point : _points)
+		{
+			point.setAcceleration(point._force / point._mass);
+			point.setVelocity(point._vel + timeStep * point._acc);
+			point.setPosition(point._pos + timeStep * point._vel);
+		}
+
+		
 		
 		break;
 	case 1:  // midpoint
