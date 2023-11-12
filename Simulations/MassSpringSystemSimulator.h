@@ -30,7 +30,7 @@ public:
 	void setMass(float mass);
 	void setStiffness(float stiffness);
 	void setDampingFactor(float damping);
-	int addMassPoint(Vec3 position, Vec3 Velocity, bool isFixed);
+	int addMassPoint(Vec3 position, Vec3 velocity, bool isFixed);
 	void addSpring(int masspoint1, int masspoint2, float initialLength);
 	int getNumberOfMassPoints();
 	int getNumberOfSprings();
@@ -75,9 +75,7 @@ private:
 	};
 
 	vector<Spring> m_vSprings;
-	vector<Point> m_vPoints_euler;
-	vector<Point> m_vPoints_midpoint;
-	vector<Point>* m_vPoints= &m_vPoints_euler;
+	vector<Point> m_vPoints;
 
 	float scale = .01;
 	Vec3 size_of_ball = Vec3(scale);
@@ -88,8 +86,10 @@ private:
 	
 	void initTable1();
 	void initDemo4();
-	float distance_normalized(Point p1, Point p2);
+	float distance(Point p1, Point p2);
 	void timestep_euler(float timeStep);
 	void timestep_midpoint(float timeStep);
+	void addBoundaries();
+	void addGravity();
 };
 #endif
