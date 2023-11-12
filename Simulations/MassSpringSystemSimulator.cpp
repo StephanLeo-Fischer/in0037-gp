@@ -61,16 +61,18 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 		if (_frameElapsed) break;
 
 		for (Point p : _points) {
-			DUC->drawSphere(p.getPosition(), 0.05);  // magic number 
+			DUC->drawSphere(p.getPosition(), 0.12);  // magic number size
 		}
 
 		for (Spring s : _springs) {
 			Vec3 pos1 = getPositionOfMassPoint(s.getIndexFirstConnectedPoint());
 			Vec3 pos2 = getPositionOfMassPoint(s.getIndexSecondConnectedPoint());
 			std::cout << pos1 << pos2;
+			DUC->beginLine();
 			DUC->drawLine(pos1, Vec3(0, 0, 0), pos2, Vec3(1, 1, 1));  // random colors
+			DUC->endLine();
 		}
-		_frameElapsed = true;
+		//_frameElapsed = true;
 		break;
 	case 1: break;
 	case 2: break;
