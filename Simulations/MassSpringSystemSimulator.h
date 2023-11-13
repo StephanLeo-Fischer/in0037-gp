@@ -95,6 +95,7 @@ private:
 	
 	Vec3 m_vExternalForce;		// Sum of the forces applied to all the mass points
 	float m_fPointsDensity;		// Used to compute the volume of the mass points (for UI)
+	int m_iTimestepMethod;		// Used to determine the method we are using for the timestep
 
 	// Intermediate computations for euler and midpoint:
 	void computeForces();				// Compute the forces applied by the springs on the points
@@ -108,12 +109,10 @@ private:
 	// Setup different demos:
 	void setupDemo1();
 	void setupComplex();
+	void setupComplex2();
+
 
 	// Printing:
 	void printPoints(string message);
-
-	// To control the framerate:
-	const float m_fFramerate = 100;
-	long m_lLastFrameTime;
 };
 #endif

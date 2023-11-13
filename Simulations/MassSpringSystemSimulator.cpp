@@ -16,6 +16,7 @@ MassSpringSystemSimulator::MassSpringSystemSimulator()
 
 	m_vExternalForce = Vec3(0, 0, 0);
 	m_fPointsDensity = 1000;
+	m_iTimestepMethod = 0;
 }
 
 const char* MassSpringSystemSimulator::getTestCasesStr()
@@ -44,6 +45,10 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		break;
 
 	case DEMO4_COMPLEX:
+		// Allow the user to select between Euler and Midpoint methods:
+		TwType TW_TYPE_METHOD;
+		TW_TYPE_METHOD = TwDefineEnumFromString("Method", "Euler,Midpoint");
+		TwAddVarRW(DUC->g_pTweakBar, "Method", TW_TYPE_METHOD, &m_iTimestepMethod, "");
 		break;
 
 	case DEMO5_LEAPFROG:
@@ -80,13 +85,6 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 					  getPositionOfMassPoint(s.point2), yellow);
 		DUC->endLine();
 	}
-
-	// Add this to avoid looping too fast:
-	const long deltaTime = clock() - m_lLastFrameTime;
-	if(deltaTime < 1000/m_fFramerate){
-		Sleep(1000 / m_fFramerate - deltaTime);
-	}
-	m_lLastFrameTime = clock();
 }
 
 // Called when we reset the scene, or change the test case:
@@ -121,7 +119,7 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 
 	case DEMO4_COMPLEX:
 		cout << "Switch to Demo4: Complex !\n";
-		setupComplex();
+		setupComplex2();
 		break;
 
 	case DEMO5_LEAPFROG:
@@ -176,7 +174,13 @@ void MassSpringSystemSimulator::simulateTimestep(float timestep)
 		break;
 
 	case DEMO4_COMPLEX:
-		timestepMidpoint(timestep);
+		if (m_iTimestepMethod == 0)
+			timestepEuler(timestep);
+		else if (m_iTimestepMethod == 1)
+			timestepMidpoint(timestep);
+		else
+			cerr << "Error: Impossible number for the timestep method" << endl;
+
 		break;
 
 	case DEMO5_LEAPFROG:
@@ -305,7 +309,7 @@ void MassSpringSystemSimulator::setupComplex()
 	setMass(10);
 	setStiffness(100);
 	setDampingFactor(1);
-	applyExternalForce(Vec3(0, 0, 0));
+	applyExternalForce(Vec3(0, 0, -1));
 
 	// Create a cylinder:
 	const Vec3 startPosition = Vec3(0, 10, 0);
@@ -344,6 +348,30 @@ void MassSpringSystemSimulator::setupComplex()
 			addSpring(i, 2);
 			addSpring(i + 1, 3);
 		}
+	}
+}
+
+void MassSpringSystemSimulator::setupComplex2()
+{
+	m_vPoints.clear();
+	m_vSprings.clear();
+
+	setMass(1);
+	setStiffness(100);
+	setDampingFactor(0.01f);
+	applyExternalForce(Vec3(0, -2, 0));		// Add gravity
+
+	const int nPoints = 5;
+	const float startAngle = 45 * M_PI / 180;	// Start angle in radians
+	const float L = 1;							// Distance between points
+	const Vec3 centerPosition = Vec3(0, L * nPoints + 0.5f, 0);
+
+	// Create a pendulum:
+	addMassPoint(centerPosition, Vec3(0, 0, 0), true);
+	for (int i = 1; i <= nPoints; i++) {
+		Vec3 deltaPosition = Vec3(i * L * sin(startAngle), -i * L * cos(startAngle), 0);
+		addMassPoint(centerPosition + deltaPosition, Vec3(0, 0, 0), false);
+		addSpring(i - 1, i);
 	}
 }
 
