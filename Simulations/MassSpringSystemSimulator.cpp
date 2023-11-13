@@ -3,7 +3,7 @@
 MassSpringSystemSimulator::MassSpringSystemSimulator(){
 	// Data Attributes
 	m_fMass = 10.0;
-	m_fStiffness = 1.0;
+	m_fStiffness = 40.0;
 	m_fDamping = .0;
 	m_iIntegrator = 1;
 	m_externalForce = Vec3(0, 0, 0);
@@ -16,7 +16,7 @@ MassSpringSystemSimulator::MassSpringSystemSimulator(){
 }
 
 const char* MassSpringSystemSimulator::getTestCasesStr(){
-	return "Demo 1: simple one-step,Demo 2: simple Euler simulation,Demo 3: simple Midpoint simulation,Demo 4: complex simulation - compare the stability of Euler and Midpoint method,Optional Demo 5: additionally implement the Leap-Frog method";
+	return "Demo 1: simple one-step,Demo 2: simple Euler simulation,Demo 3: simple Midpoint simulation,Demo 4: complex simulation - compare the stability of Euler and Midpoint method";
 }
 
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC){
@@ -129,14 +129,6 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase){
 			cout << p.to_string();
 		}
 		break;
-
-	case 4:
-		cout << "Optional Demo 5: additionally implement the Leap-Frog method\n";
-		for (auto& p : m_vPoints) {
-			cout << p.to_string();
-		}
-		break;
-
 	default:
 		cout << "Empty Test!\n";
 		break;
@@ -182,10 +174,16 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep){
 		case 0: 
 			timestep_euler(timeStep); 
 			addBoundaries();
+			for (auto& p : m_vPoints) {
+				cout << p.to_string();
+			}
 			break;
 		case 1: 
 			timestep_midpoint(timeStep); 
 			addBoundaries();
+			for (auto& p : m_vPoints) {
+				cout << p.to_string();
+			}
 			break;
 		case 2: 
 			break;
@@ -367,7 +365,7 @@ void MassSpringSystemSimulator::timestep_euler(float timeStep){
 void MassSpringSystemSimulator::timestep_midpoint(float timeStep){
 	std::vector<Vec3> old_pos;
 	std::vector<Vec3> old_vel;
-	for (auto p : m_vPoints) {
+	for (auto& p : m_vPoints) {
 		old_pos.push_back(p.m_vPosition);
 		old_vel.push_back(p.m_vVelocity);
 	}
@@ -476,8 +474,8 @@ std::string MassSpringSystemSimulator::Point::to_string(){
 	cout << "\tp: " << m_vPosition.toString()
 		<< "\n\tv: " << m_vVelocity.toString()
 		<< "\n\ta: " << m_vAcceleration.toString()
-		<< "\n\tf: " << m_vForce.toString()
-		<< "\n\tm:" << m_fMass << '\n';
+		<< "\n\tf: " << m_vForce.toString() << '\n';
+		//<< "\n\tm:" << m_fMass << '\n';
 	if (m_bFixed) {
 		cout << "Fixed\n";
 	}
