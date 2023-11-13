@@ -4,7 +4,7 @@ MassSpringSystemSimulator::MassSpringSystemSimulator(){
 	// Data Attributes
 	m_fMass = 10.0;
 	m_fStiffness = 1.0;
-	m_fDamping = 1.0;
+	m_fDamping = .0;
 	m_iIntegrator = 1;
 	m_externalForce = Vec3(0, 0, 0);
 
@@ -21,15 +21,18 @@ const char* MassSpringSystemSimulator::getTestCasesStr(){
 
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC){
 	this->DUC = DUC;
+	TwType TW_TYPE_INTEGRATOR = TwDefineEnumFromString("Integrator", "Euler,Midpoint,LeapFrog");
 	switch (m_iTestCase)
 	{
 	case 0:break;
 	case 1:break;
 	case 2:break;
 	case 3:
-		TwAddVarRW(DUC->g_pTweakBar, "Euler", TW_TYPE_BOOL8, &m_bModeEuler, "");
-		TwAddVarRW(DUC->g_pTweakBar, "Midpoint", TW_TYPE_BOOL8, &m_bModeMidpoint, "");
-		TwAddVarRW(DUC->g_pTweakBar, "Masspoints", TW_TYPE_INT32, &m_iNumberOfWantedMasspoints, "min=10 max=100 step=1");
+		TwAddVarRW(DUC->g_pTweakBar, "Integrator", TW_TYPE_INTEGRATOR, &m_iIntegrator, "");
+		TwAddVarRW(DUC->g_pTweakBar, "Mass",       TW_TYPE_FLOAT, &m_fMass,      "step=0.1  min=0.1");
+		TwAddVarRW(DUC->g_pTweakBar, "Stiffness",  TW_TYPE_FLOAT, &m_fStiffness, "step=0.1  min=0.1");
+		TwAddVarRW(DUC->g_pTweakBar, "Damping",    TW_TYPE_FLOAT, &m_fDamping,   "step=0.1  max=1 min=0");
+		TwAddVarRW(DUC->g_pTweakBar, "Gravity",    TW_TYPE_BOOLCPP, &m_bGravity, "");
 		break;
 	default:break;
 	}
@@ -54,13 +57,22 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 	case 0: // single timestep
 	case 1: // euler simulation
 	case 2: // midpoint simulation
-	case 3: // complex simulation
 		for (auto& p : m_vPoints) {
 			DUC->drawSphere(p.m_vPosition, size_of_ball * p.m_fMass);
 			DUC->beginLine();
-			DUC->drawLine(p.m_vPosition, green, p.m_vPosition + p.m_vVelocity, green);
-			DUC->drawLine(p.m_vPosition, red, p.m_vPosition + p.m_vForce, red);
+			DUC->drawLine(p.m_vPosition, green, p.m_vPosition + p.m_vVelocity, green); // velocity
+			DUC->drawLine(p.m_vPosition, red, p.m_vPosition / 10 + p.m_vForce, red); // force
 			DUC->endLine();
+		}
+		for (auto& s : m_vSprings) {
+			DUC->beginLine();
+			DUC->drawLine(m_vPoints.at(s.m_pPoints.first).m_vPosition, white, m_vPoints.at(s.m_pPoints.second).m_vPosition, white);
+			DUC->endLine();
+		}
+		break;
+	case 3: // complex simulation
+		for (auto& p : m_vPoints) {
+			DUC->drawSphere(p.m_vPosition, size_of_ball * p.m_fMass);
 		}
 		for (auto& s : m_vSprings) {
 			DUC->beginLine();
@@ -77,7 +89,7 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase){
 	{
 	case 0: // single timestep
 		initTable1();
-		cout << "Demo 1, a simple one-step test - HINT: hardcoded for 0.005s timestep\n";
+		cout << "Demo 1, a simple one-step test\n";
 		for (auto& p : m_vPoints) {
 			cout << p.to_string();
 		}
@@ -158,27 +170,26 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep){
 	{
 	case 0: // single timestep 
 		break;
-
 	case 1: // Euler simulation
 		timestep_euler(timeStep);
-		addBoundaries();
 		break;
-
 	case 2: // Midpoint simulation
 		timestep_midpoint(timeStep);
-		addBoundaries();
 		break;
 	case 3: // Complex simulations
-		if (m_bModeEuler && m_bModeMidpoint) {
-			cout << "Please select only one method!\n";
+		switch (m_iIntegrator)
+		{
+		case 0: 
+			timestep_euler(timeStep); 
+			addBoundaries();
+			break;
+		case 1: 
+			timestep_midpoint(timeStep); 
+			addBoundaries();
+			break;
+		case 2: 
+			break;
 		}
-		if (m_bModeEuler) {
-			timestep_euler(timeStep);
-		}
-		if (m_bModeMidpoint) {
-			timestep_midpoint(timeStep);
-		}
-		addBoundaries();
 		break;
 	default:
 		break;
@@ -275,27 +286,23 @@ void MassSpringSystemSimulator::initTable1(){
 void MassSpringSystemSimulator::initDemo4(){
 	m_vPoints.clear();
 	m_vSprings.clear();
+	int iNumberOfWantedMasspoints = 8;
 
-	std::mt19937 eng;
-	std::uniform_real_distribution<float> randLen(0.0f, 1.0f);
-	std::uniform_real_distribution<float> randPos(-1.0f, 1.0f);
-
-	int i = addMassPoint(
-		Vec3(randPos(eng), randPos(eng), randPos(eng)),
-		Vec3(randPos(eng), randPos(eng), randPos(eng)),
-		false);
-
-	for (; i < m_iNumberOfWantedMasspoints; ++i) {
-		addSpring(
-			i,
-			addMassPoint(
-				Vec3(randPos(eng), randPos(eng), randPos(eng)),
-				Vec3(randPos(eng), randPos(eng), randPos(eng)),
-				false),
-			randLen(eng));
-		m_vPoints.at(i).m_fMass = m_fMass;
+	for (int i = 0; i < iNumberOfWantedMasspoints; ++i) {
+		addMassPoint(Vec3(i / 4, (i / 2)%2, i % 2), Vec3(0,0,0), false);
 	}
-	addSpring(0, getNumberOfMassPoints() - 1, randLen(eng));
+	addSpring(0, 1, 1);
+	addSpring(1, 3, 1);
+	addSpring(3, 2, 1);
+	addSpring(2, 0, 1);
+	addSpring(4, 5, 1);
+	addSpring(5,7, 1);
+	addSpring(7, 6, 1);
+	addSpring(6, 4, 1);
+	addSpring(0, 4, 1);
+	addSpring(1, 5, 1);
+	addSpring(2, 6, 1);
+	addSpring(3, 7, 1);
 }
 
 float MassSpringSystemSimulator::distance(Point p1, Point p2){
@@ -306,54 +313,162 @@ float MassSpringSystemSimulator::distance(Point p1, Point p2){
 }
 
 void MassSpringSystemSimulator::timestep_euler(float timeStep){
+	// reset forces	
 	for (auto& p : m_vPoints) {
-		p.m_vPosition += timeStep * p.m_vVelocity;
+		if (m_bGravity) {
+			p.m_vForce = Vec3(0, -9.81, 0);
+		}
+		else {
+			p.m_vForce = Vec3(0, 0, 0);
+		}
 	}
+	
+	// calc Forces
 	for (auto& s : m_vSprings) {
 		Point& p1 = m_vPoints.at(s.m_pPoints.first);
 		Point& p2 = m_vPoints.at(s.m_pPoints.second);
-		float d = distance(p1, p2);
 
-		Vec3 force = -s.m_fStiffness * (d - s.m_fInitialLength) * (p1.m_vPosition - p2.m_vPosition) / d;
-		p1.m_vForce = force;
-		p2.m_vForce = -force;
+		float l = distance(p1, p2);
+		float L = s.m_fInitialLength;
+		float k = m_fStiffness;
 
-		addGravity();
+		Vec3 f = (p1.m_vPosition - p2.m_vPosition) * (-k * (l - L) / l);
 
-		p1.m_vAcceleration = p1.m_vForce / p1.m_fMass;
-		p2.m_vAcceleration = p2.m_vForce / p2.m_fMass;
+		 p1.m_vForce+= f;
+		 p2.m_vForce-= f;
+	}
 
-		p1.m_vVelocity += timeStep * p1.m_vAcceleration;
-		p2.m_vVelocity += timeStep * p2.m_vAcceleration;
+	// additional damping
+	for (auto& p : m_vPoints) {
+		Vec3 v = p.m_vVelocity;
 
-		p1.m_vPosition += timeStep * p1.m_vVelocity;
-		p2.m_vPosition += timeStep * p2.m_vVelocity;
+		p.m_vForce += v * -m_fDamping;
+		p.m_vForce -= m_fDamping * p.m_vVelocity;
+	}
+	
+	// update current positions
+	for (auto& p : m_vPoints) {
+		if (!p.m_bFixed) {
+			p.m_vPosition += p.m_vVelocity * timeStep;
+		}
+	}
+
+	// update current velocities
+	for (auto& p : m_vPoints) {
+		if (!p.m_bFixed) {
+			p.m_vVelocity += p.m_vForce * (timeStep / p.m_fMass);
+		}
+		else{
+			p.m_vVelocity = Vec3(0, 0, 0);
+		}
 	}
 }
 
 void MassSpringSystemSimulator::timestep_midpoint(float timeStep){
-	timestep_euler(timeStep / 2);
-	timestep_euler(timeStep / 2);
+	std::vector<Vec3> old_pos;
+	std::vector<Vec3> old_vel;
+	for (auto p : m_vPoints) {
+		old_pos.push_back(p.m_vPosition);
+		old_vel.push_back(p.m_vVelocity);
+	}
+
+	// reset forces	
+	for (auto& p : m_vPoints) {
+		if (m_bGravity) {
+			p.m_vForce = Vec3(0, -9.81, 0);
+		}
+		else {
+			p.m_vForce = Vec3(0, 0, 0);
+		}
+	}
+
+	// calc Forces
+	for (auto& s : m_vSprings) {
+		Point& p1 = m_vPoints.at(s.m_pPoints.first);
+		Point& p2 = m_vPoints.at(s.m_pPoints.second);
+
+		float l = distance(p1, p2);
+		float L = s.m_fInitialLength;
+		float k = m_fStiffness;
+
+		Vec3 f = (p1.m_vPosition - p2.m_vPosition) * (-k * (l - L) / l);
+
+		p1.m_vForce += f;
+		p2.m_vForce -= f;
+	}
+
+	// update current positions /2
+	for (auto& p : m_vPoints) {
+		if (!p.m_bFixed) {
+			p.m_vPosition += p.m_vVelocity * timeStep/2;
+		}
+	}
+
+	// update current velocities /2
+	for (auto& p : m_vPoints) {
+		if (!p.m_bFixed) {
+			p.m_vVelocity += p.m_vForce * ((timeStep/2) / p.m_fMass);
+		}
+		else {
+			p.m_vVelocity = Vec3(0, 0, 0);
+		}
+	}
+
+	// calc Forces with new positions
+	for (auto& s : m_vSprings) {
+		Point& p1 = m_vPoints.at(s.m_pPoints.first);
+		Point& p2 = m_vPoints.at(s.m_pPoints.second);
+
+		float l = distance(p1, p2);
+		float L = s.m_fInitialLength;
+		float k = m_fStiffness;
+
+		Vec3 f = (p1.m_vPosition - p2.m_vPosition) * (-k * (l - L) / l);
+
+		p1.m_vForce += f;
+		p2.m_vForce -= f;
+	}
+
+	// restore old positions
+	for (int i = 0; i < m_vPoints.size(); ++i) {
+		m_vPoints.at(i).m_vPosition = old_pos.at(i);
+	}
+
+	// update current positions /2
+	for (auto& p : m_vPoints) {
+		if (!p.m_bFixed) {
+			p.m_vPosition += p.m_vVelocity * timeStep;
+		}
+	}
+
+	// restore old velocities
+	for (int i = 0; i < m_vPoints.size(); ++i) {
+		m_vPoints.at(i).m_vVelocity = old_vel.at(i);
+	}
+
+	// update current velocities /2
+	for (auto& p : m_vPoints) {
+		if (!p.m_bFixed) {
+			p.m_vVelocity += p.m_vForce * (timeStep / p.m_fMass);
+		}
+		else {
+			p.m_vVelocity = Vec3(0, 0, 0);
+		}
+	}
 }
 
 void MassSpringSystemSimulator::addBoundaries(){
 	float max = 1;
 	for (Point& p : m_vPoints) {
-		if (p.m_vPosition.x > max*5 || p.m_vPosition.x < -max*5){
-			p.m_vVelocity.x *= -0.5;
+		if (p.m_vPosition.x > max*2 || p.m_vPosition.x < -max*2){
+			p.m_vVelocity.x *= -1;
 		}
-		if (p.m_vPosition.y > max*5 || p.m_vPosition.y < -max) {
-			p.m_vVelocity.y *= -0.5;
+		if (p.m_vPosition.y > max*2 || p.m_vPosition.y < -max) {
+			p.m_vVelocity.y *= -1;
 		}
-		if (p.m_vPosition.z > max*5 || p.m_vPosition.z < -max*5) {
-			p.m_vVelocity.z *= -0.5;
+		if (p.m_vPosition.z > max*2 || p.m_vPosition.z < -max*2) {
+			p.m_vVelocity.z *= -1;
 		}
-	}
-}
-
-void MassSpringSystemSimulator::addGravity(){
-	for (Point& p : m_vPoints) {
-		p.m_vForce += Vec3(0, -9.81, 0);
 	}
 }
 

@@ -80,9 +80,7 @@ private:
 	float scale = .01;
 	Vec3 size_of_ball = Vec3(scale);
 	bool executed = false;
-	bool m_bModeEuler = true;
-	bool m_bModeMidpoint = false;
-	int m_iNumberOfWantedMasspoints = 10;
+	bool m_bGravity = false;
 	
 	void initTable1();
 	void initDemo4();
@@ -90,6 +88,5 @@ private:
 	void timestep_euler(float timeStep);
 	void timestep_midpoint(float timeStep);
 	void addBoundaries();
-	void addGravity();
 };
 #endif
