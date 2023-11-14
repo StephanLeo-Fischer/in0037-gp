@@ -219,18 +219,19 @@ void MassSpringSystemSimulator::eulerSimulation(float timeStep) {
 		Vec3 dir = p2Pos - p1Pos;
 		Vec3 p1Force = -m_fStiffness * (l - spring.getInitialLength()) * (dir / l);
 
-		printPoints();
-		p1._force += Vec3(1,1,1);//p1Force;  // wenn man mehr springs hat, werden die werte aber überschrieben. TODO
-		p2._force += Vec3(1, 1, 1);// -p1Force;  // trick 17
-		printPoints();
+		p1._force += p1Force;  // wenn man mehr springs hat, werden die werte aber überschrieben. TODO
+		p2._force +=  -p1Force;  // trick 17
 	}
 
 	// apply forces to masses
 	for (Point& point : _points)
 	{
+		Vec3 oldVel = point._vel;  // times the old acc / vel?? TODO
+		Vec3 oldAcc = point._acc;
+
 		point.setAcceleration(point._force / point._mass);
-		point.setVelocity(point._vel + timeStep * point._acc);
-		point.setPosition(point._pos + timeStep * point._vel);
+		point.setVelocity(point._vel + timeStep * oldAcc);
+		point.setPosition(point._pos + timeStep * oldVel);
 	}
 
 }
