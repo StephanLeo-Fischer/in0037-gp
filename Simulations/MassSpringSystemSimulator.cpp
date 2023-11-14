@@ -191,9 +191,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		printPoints();
 		eulerSimulation(timeStep);
 		printPoints();
-		eulerSimulation(timeStep);
-		printPoints();
-		_frameElapsed = true;
+		_frameElapsed = true;  // TODO: interactble with UI so you can go frame by frame
 		
 		break;
 	case 1:  // midpoint
