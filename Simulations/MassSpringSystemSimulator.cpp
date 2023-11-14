@@ -51,6 +51,7 @@ void MassSpringSystemSimulator::reset()
 	m_mouse.x = m_mouse.y = 0;
 	m_trackmouse.x = m_trackmouse.y = 0;
 	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
+
 }
 
 void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
@@ -165,6 +166,11 @@ Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
 
 void MassSpringSystemSimulator::initDemo1() 
 {
+	// clear lists
+	_points.clear();
+	_springs.clear();
+	std::cout << "CLLLEEEAAAR" << _points.size();
+
 	setMass(10);
 	setStiffness(40);
 	setDampingFactor(1);  // 1 sollte nichts dampen
@@ -185,7 +191,7 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		printPoints();
 		eulerSimulation(timeStep);
 		printPoints();
-		_frameElapsed = true;
+		//_frameElapsed = true;
 		
 		break;
 	case 1:  // midpoint
@@ -216,7 +222,7 @@ void MassSpringSystemSimulator::eulerSimulation(float timeStep) {
 		Vec3 p1Pos = p1.getPosition();
 		Vec3 p2Pos = p2.getPosition();
 		float l = sqrt(pow(p1Pos.x - p2Pos.x, 2) + pow(p1Pos.y - p2Pos.y, 2) + pow(p1Pos.z - p2Pos.z, 2));
-		Vec3 dir = p2Pos - p1Pos;
+		Vec3 dir = p1Pos - p2Pos;
 		Vec3 p1Force = -m_fStiffness * (l - spring.getInitialLength()) * (dir / l);
 
 		p1._force += p1Force;  // wenn man mehr springs hat, werden die werte aber überschrieben. TODO
