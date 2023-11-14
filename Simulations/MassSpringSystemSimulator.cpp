@@ -31,7 +31,7 @@ void MassSpringSystemSimulator::onMouse(int x, int y)
 
 const char* MassSpringSystemSimulator::getTestCasesStr()
 {
-	return "Euler,Leapfrog,Mitpoint";
+	return "Euler,MiTpoint";  // no Leapfrog
 }
 
 void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC)
@@ -51,7 +51,6 @@ void MassSpringSystemSimulator::reset()
 	m_mouse.x = m_mouse.y = 0;
 	m_trackmouse.x = m_trackmouse.y = 0;
 	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
-
 }
 
 void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
@@ -72,6 +71,7 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 			DUC->endLine();
 		}
 		break;
+
 	case 1:  // midpoint
 		for (Point p : _points) {
 			DUC->drawSphere(p.getPosition(), 0.12);  // magic number size
@@ -84,26 +84,35 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 			DUC->drawLine(pos1, Vec3(0, 0, 0), pos2, Vec3(1, 1, 1));  // random colors
 			DUC->endLine();
 		}
+		break;
+
+	case 2:  // crazy demo
+
+
 
 
 		break;
-	case 2: break;
 	}
 }
 
 void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 {
+	if (!_alreadyInitialized) {
+		//initDemo1();
+		initDemo4();
+		_alreadyInitialized = true;
+	}
+		
+
 	m_iTestCase = testCase;
 	switch (m_iTestCase)
 	{
 	case 0:
-		cout << "Test Case 1!\n";
-		initDemo1();
+		cout << "euler!\n";
 
 		break;
 	case 1:
-		cout << "Test Case 2!\n";
-		initDemo1();
+		cout << "midpoint!\n";
 
 		break;
 	case 2:
@@ -192,6 +201,24 @@ void MassSpringSystemSimulator::initDemo1()
 	int p1 = addMassPoint(Vec3(0, 0, 0), Vec3(-1, 0, 0), false);
 	int p2 = addMassPoint(Vec3(0, 2, 0), Vec3(1, 0, 0), false);
 	addSpring(p1, p2, 1);  // L = 1
+}
+
+void MassSpringSystemSimulator::initDemo4()  // TODO
+{
+	// clear lists
+	_points.clear();
+	_springs.clear();
+	std::cout << "CLLLEEEAAAR" << _points.size();
+
+	setMass(10);
+	setStiffness(40);
+	setDampingFactor(1);  // 1 sollte nichts dampen
+	for (int i = 0; i < 10; i++) {  // at least 10 points and 10 springs
+		addMassPoint(Vec3(i % 4, i, i), Vec3((i % 10) - 5, 0, 0), false);
+		addSpring(i, (i + 1) % 10, 1);  // L = 1
+		addSpring(i, (i + 5) % 10, 1);  // L = 1
+	}
+
 }
 
 void MassSpringSystemSimulator::simulateTimestep(float timeStep)

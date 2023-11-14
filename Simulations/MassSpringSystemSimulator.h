@@ -47,6 +47,7 @@ public:
 	void eulerSimulation(float timeStep);
 	void printPoints();
 	void midPointSimulation(float timeStep);
+	void initDemo4();
 
 	// Do Not Change
 	void setIntegrator(int integrator) {
@@ -63,6 +64,7 @@ private:
 	std::vector<Point> _points;
 	std::vector<Spring> _springs;
 	bool _frameElapsed = false;
+	bool _alreadyInitialized = false;
 
 	// UI Attributes
 	Vec3 m_externalForce;
