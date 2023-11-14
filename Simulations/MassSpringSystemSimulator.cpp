@@ -214,7 +214,7 @@ void MassSpringSystemSimulator::initDemo4()  // TODO
 	setStiffness(40);
 	setDampingFactor(1);  // 1 sollte nichts dampen
 	for (int i = 0; i < 10; i++) {  // at least 10 points and 10 springs
-		addMassPoint(Vec3(i % 4, i, i), Vec3((i % 10) - 5, 0, 0), false);
+		addMassPoint(Vec3(i % 4, i, i), Vec3((i % 10) - 5, -2, 0), false);
 		addSpring(i, (i + 1) % 10, 1);  // L = 1
 		addSpring(i, (i + 5) % 10, 1);  // L = 1
 	}
@@ -321,6 +321,10 @@ void MassSpringSystemSimulator::midPointSimulation(float timeStep) {
 		point.setAcceleration(midPoint._force / point._mass);
 		point.setVelocity(midPoint._vel + timeStep * midPoint._acc);
 		point.setPosition(point._pos + timeStep * midPoint._vel);
+
+		if (point._pos.y < 0) {  // bouncy ground check
+			point._pos.y = -point._pos.y * 0.7;  // magic bounce damping number
+		}
 	}
 }
 
@@ -357,6 +361,11 @@ void MassSpringSystemSimulator::eulerSimulation(float timeStep) {
 		point.setAcceleration(point._force / point._mass);
 		point.setVelocity(point._vel + timeStep * oldAcc);
 		point.setPosition(point._pos + timeStep * oldVel);
+
+		if (point._pos.y < 0) {  // bouncy ground check
+			point._pos.y = -point._pos.y;
+			point._vel = -point._vel * 0.5;  // magic bounce damping number
+		}
 	}
 
 }
