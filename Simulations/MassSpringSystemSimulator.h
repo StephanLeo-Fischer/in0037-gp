@@ -46,6 +46,7 @@ public:
 	void initDemo1();
 	void eulerSimulation(float timeStep);
 	void printPoints();
+	void midPointSimulation(float timeStep);
 
 	// Do Not Change
 	void setIntegrator(int integrator) {

@@ -186,15 +186,20 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase)
 	{// handling different cases
 	case 0:  // Euler timestep
-		//single step
-		if (_frameElapsed) break;
+		
+		if (_frameElapsed) break;  //single step
 		printPoints();
 		eulerSimulation(timeStep);
 		printPoints();
-		_frameElapsed = true;  // TODO: interactble with UI so you can go frame by frame
+		//_frameElapsed = true;  // TODO: interactble with UI so you can go frame by frame
 		
 		break;
 	case 1:  // midpoint
+		if (_frameElapsed) break;  //single step
+		printPoints();
+		midPointSimulation(timeStep);
+		printPoints();
+		//_frameElapsed = true;  // TODO: interactble with UI so you can go frame by frame
 		break;
 	case 2:  // leapfrog
 		break;
@@ -209,6 +214,49 @@ void MassSpringSystemSimulator::printPoints() {
 		std::cout << "\npos " << p.getPosition() << "\tvel " << p.getVelocity() << "\tacc " << p._acc << "\tforce " << p._force;
 	}
 
+}
+
+void MassSpringSystemSimulator::midPointSimulation(float timeStep) {
+	// reset forces after every timestep
+	for (Point& p : _points) {
+		p._force = Vec3(0, 0, 0);
+	}
+
+	// get initial forces from springs  // same as euler
+	for (Spring& spring : _springs) {
+		Point& p1 = _points.at(spring.getIndexFirstConnectedPoint());
+		Point& p2 = _points.at(spring.getIndexSecondConnectedPoint());
+
+		// hooke's law: -k * (l - L) * normalizedDirection
+		// l distance
+		Vec3 p1Pos = p1.getPosition();
+		Vec3 p2Pos = p2.getPosition();
+		float l = sqrt(pow(p1Pos.x - p2Pos.x, 2) + pow(p1Pos.y - p2Pos.y, 2) + pow(p1Pos.z - p2Pos.z, 2));
+		Vec3 dir = p1Pos - p2Pos;
+		Vec3 p1Force = (-m_fStiffness * (l - spring.getInitialLength()) / l) * dir;
+
+		p1._force += p1Force;
+		p2._force += -p1Force;  // trick 17
+	}
+
+	std::vector<Point> midPoints;
+
+
+	// get where points would be after half a timestep
+	for (Point& point : _points)
+	{
+		Vec3 midPointAcc = point._force / point._mass;
+		Vec3 midPointVel = point._vel + timeStep / 2 * point._acc;
+		Vec3 midPointPos = point._pos + timeStep / 2 * point._vel;
+
+		Point midPoint = Point{ midPointPos, midPointVel, midPointAcc, point._force, m_fMass, point._isFixed };
+		midPoints.push_back(midPoint);
+	}
+
+	// calculate forces at midpoint
+		// TODO
+	// apply forces from midpoint to old Pos
+		//TODO
 }
 
 void MassSpringSystemSimulator::eulerSimulation(float timeStep) {
