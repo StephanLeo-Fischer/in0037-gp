@@ -44,7 +44,8 @@ public:
 	//Vec3 calculatePosAfterEuler(Vec3 curPos, Vec3 curVelocity, float mass, Vec3 springForce);
 
 	void initDemo1();
-	template <typename T> T getElementAtIndex(std::list<T> list, int index);
+	void eulerSimulation(float timeStep);
+	void printPoints();
 
 	// Do Not Change
 	void setIntegrator(int integrator) {
@@ -58,8 +59,8 @@ private:
 	float m_fDamping;
 	int m_iIntegrator;
 
-	std::list<Point> _points;
-	std::list<Spring> _springs;
+	std::vector<Point> _points;
+	std::vector<Spring> _springs;
 	bool _frameElapsed = false;
 
 	// UI Attributes
