@@ -72,7 +72,21 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 			DUC->endLine();
 		}
 		break;
-	case 1: break;
+	case 1:  // midpoint
+		for (Point p : _points) {
+			DUC->drawSphere(p.getPosition(), 0.12);  // magic number size
+		}
+
+		for (Spring s : _springs) {
+			Vec3 pos1 = getPositionOfMassPoint(s.getIndexFirstConnectedPoint());
+			Vec3 pos2 = getPositionOfMassPoint(s.getIndexSecondConnectedPoint());
+			DUC->beginLine();
+			DUC->drawLine(pos1, Vec3(0, 0, 0), pos2, Vec3(1, 1, 1));  // random colors
+			DUC->endLine();
+		}
+
+
+		break;
 	case 2: break;
 	}
 }
@@ -89,6 +103,7 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase)
 		break;
 	case 1:
 		cout << "Test Case 2!\n";
+		initDemo1();
 
 		break;
 	case 2:
@@ -249,14 +264,37 @@ void MassSpringSystemSimulator::midPointSimulation(float timeStep) {
 		Vec3 midPointVel = point._vel + timeStep / 2 * point._acc;
 		Vec3 midPointPos = point._pos + timeStep / 2 * point._vel;
 
-		Point midPoint = Point{ midPointPos, midPointVel, midPointAcc, point._force, m_fMass, point._isFixed };
+		Point midPoint = Point{ midPointPos, midPointVel, midPointAcc, Vec3(0, 0, 0), m_fMass, point._isFixed};
 		midPoints.push_back(midPoint);
 	}
 
 	// calculate forces at midpoint
-		// TODO
+	for (Spring& spring : _springs) {
+		Point& midP1 = midPoints.at(spring.getIndexFirstConnectedPoint());
+		Point& midP2 = midPoints.at(spring.getIndexSecondConnectedPoint());
+
+		// hooke's law: -k * (l - L) * normalizedDirection
+		// l distance
+		Vec3 midP1Pos = midP1.getPosition();
+		Vec3 midP2Pos = midP2.getPosition();
+		float l = sqrt(pow(midP1Pos.x - midP2Pos.x, 2) + pow(midP1Pos.y - midP2Pos.y, 2) + pow(midP1Pos.z - midP2Pos.z, 2));
+		Vec3 dir = midP1Pos - midP2Pos;
+		Vec3 midP1Force = (-m_fStiffness * (l - spring.getInitialLength()) / l) * dir;
+
+		midP1._force += midP1Force;
+		midP2._force += -midP1Force;  // trick 17
+	}
+
 	// apply forces from midpoint to old Pos
-		//TODO
+	for (int i = 0; i < _points.size(); i++)
+	{
+		Point& point = _points[i];
+		Point midPoint = midPoints[i];
+
+		point.setAcceleration(midPoint._force / point._mass);
+		point.setVelocity(midPoint._vel + timeStep * midPoint._acc);
+		point.setPosition(point._pos + timeStep * midPoint._vel);
+	}
 }
 
 void MassSpringSystemSimulator::eulerSimulation(float timeStep) {
