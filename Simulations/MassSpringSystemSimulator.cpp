@@ -60,14 +60,13 @@ void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateCont
 	case 0:  // euler single step
 		if (_frameElapsed) break;
 
-		for (Point p : _points) {
+		for (Point& p : _points) {
 			DUC->drawSphere(p.getPosition(), 0.12);  // magic number size
 		}
 
-		for (Spring s : _springs) {
+		for (Spring& s : _springs) {
 			Vec3 pos1 = getPositionOfMassPoint(s.getIndexFirstConnectedPoint());
 			Vec3 pos2 = getPositionOfMassPoint(s.getIndexSecondConnectedPoint());
-			std::cout << pos1 << pos2;
 			DUC->beginLine();
 			DUC->drawLine(pos1, Vec3(0, 0, 0), pos2, Vec3(1, 1, 1));  // random colors
 			DUC->endLine();
@@ -135,14 +134,14 @@ void MassSpringSystemSimulator::setDampingFactor(float damping) {
 }
 
 int MassSpringSystemSimulator::addMassPoint(Vec3 position, Vec3 velocity, bool isFixed) {
-	Point point{ position, velocity, Vec3(), Vec3(), m_fMass, isFixed };
+	Point& point = Point{ position, velocity, Vec3(), Vec3(), m_fMass, isFixed };
 	_points.push_back(point);  // adding it to list of all points
 	return _points.size() - 1;  // gibt index in / größe der Liste zurück 
 }
 
 
 void MassSpringSystemSimulator::addSpring(int masspoint1, int masspoint2, float initialLength) {
-	Spring spring{ masspoint1, masspoint2, initialLength, m_fStiffness, m_fDamping };
+	Spring& spring = Spring{ masspoint1, masspoint2, initialLength, m_fStiffness, m_fDamping };
 	_springs.push_back(spring);  // adding it to list of all springs
 }
 
@@ -166,7 +165,7 @@ Vec3 MassSpringSystemSimulator::getVelocityOfMassPoint(int index)
 }
 
 template <typename T>  // template T: https://www.geeksforgeeks.org/templates-cpp/
-T getElementAtIndex(std::list<T> list, int index) {
+T MassSpringSystemSimulator::getElementAtIndex(std::list<T> list, int index) {
 	// help from https://stackoverflow.com/questions/16747591/how-to-get-an-element-at-specified-index-from-c-list
 	auto front = list.begin();
 	std::advance(front, index);
@@ -191,25 +190,24 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 	{// handling different cases
 	case 0:  // Euler timestep
 		// get forces from springs
-		for (Spring spring : _springs) {
-			Point p1 = getElementAtIndex(_points, spring.getIndexFirstConnectedPoint());
-			Point p2 = getElementAtIndex(_points, spring.getIndexSecondConnectedPoint());
+		for (Spring& spring : _springs) {
+			Point &p1 = getElementAtIndex(_points, spring.getIndexFirstConnectedPoint());
+			Point &p2 = getElementAtIndex(_points, spring.getIndexSecondConnectedPoint());
 
 			// hooke's law: -k * (l - L) * normalizedDirection
 			// l distance
 			Vec3 p1Pos = p1.getPosition();
 			Vec3 p2Pos = p2.getPosition();
 			float l = sqrt(pow(p1Pos.x - p2Pos.x, 2) + pow(p1Pos.y - p2Pos.y, 2) + pow(p1Pos.z - p2Pos.z, 2));
-			std::cout << '\n' << l << " current length\n";
 			Vec3 dir = p2Pos - p1Pos;
 			Vec3 p1Force = -m_fStiffness * (l - spring.getInitialLength()) * (dir / l);
 
-			p1.setForce(p1Force);  // wenn man mehr springs hat, werden die werte aber überschrieben. TODO
-			p2.setForce(-p1Force);  // trick 17
+			p1._force += p1Force;  // wenn man mehr springs hat, werden die werte aber überschrieben. TODO
+			p2._force += -p1Force;  // trick 17
 		}
 
 		// apply forces to masses
-		for (Point point : _points)
+		for (Point& point : _points)
 		{
 			point.setAcceleration(point._force / point._mass);
 			point.setVelocity(point._vel + timeStep * point._acc);

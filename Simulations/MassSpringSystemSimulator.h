@@ -44,6 +44,7 @@ public:
 	//Vec3 calculatePosAfterEuler(Vec3 curPos, Vec3 curVelocity, float mass, Vec3 springForce);
 
 	void initDemo1();
+	template <typename T> T getElementAtIndex(std::list<T> list, int index);
 
 	// Do Not Change
 	void setIntegrator(int integrator) {
