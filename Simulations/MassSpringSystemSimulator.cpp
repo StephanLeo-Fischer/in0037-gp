@@ -191,7 +191,9 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep)
 		printPoints();
 		eulerSimulation(timeStep);
 		printPoints();
-		//_frameElapsed = true;
+		eulerSimulation(timeStep);
+		printPoints();
+		_frameElapsed = true;
 		
 		break;
 	case 1:  // midpoint
@@ -212,6 +214,12 @@ void MassSpringSystemSimulator::printPoints() {
 }
 
 void MassSpringSystemSimulator::eulerSimulation(float timeStep) {
+
+	// reset forces after every timestep
+	for (Point& p : _points) {
+		p._force = Vec3(0, 0, 0);
+	}
+
 	// get forces from springs
 	for (Spring& spring : _springs) {
 		Point& p1 = _points.at(spring.getIndexFirstConnectedPoint());
@@ -223,16 +231,16 @@ void MassSpringSystemSimulator::eulerSimulation(float timeStep) {
 		Vec3 p2Pos = p2.getPosition();
 		float l = sqrt(pow(p1Pos.x - p2Pos.x, 2) + pow(p1Pos.y - p2Pos.y, 2) + pow(p1Pos.z - p2Pos.z, 2));
 		Vec3 dir = p1Pos - p2Pos;
-		Vec3 p1Force = -m_fStiffness * (l - spring.getInitialLength()) * (dir / l);
+		Vec3 p1Force = (-m_fStiffness * (l - spring.getInitialLength()) / l) * dir;
 
-		p1._force += p1Force;  // wenn man mehr springs hat, werden die werte aber überschrieben. TODO
+		p1._force += p1Force;
 		p2._force +=  -p1Force;  // trick 17
 	}
 
 	// apply forces to masses
 	for (Point& point : _points)
 	{
-		Vec3 oldVel = point._vel;  // times the old acc / vel?? TODO
+		Vec3 oldVel = point._vel;  // times the old acc / vel? TODO
 		Vec3 oldAcc = point._acc;
 
 		point.setAcceleration(point._force / point._mass);
