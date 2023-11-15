@@ -29,10 +29,10 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC){
 	case 2:break;
 	case 3:
 		TwAddVarRW(DUC->g_pTweakBar, "Integrator", TW_TYPE_INTEGRATOR, &m_iIntegrator, "");
-		TwAddVarRW(DUC->g_pTweakBar, "Mass",       TW_TYPE_FLOAT, &m_fMass,      "step=0.1  min=0.1");
-		TwAddVarRW(DUC->g_pTweakBar, "Stiffness",  TW_TYPE_FLOAT, &m_fStiffness, "step=0.1  min=0.1");
-		TwAddVarRW(DUC->g_pTweakBar, "Damping",    TW_TYPE_FLOAT, &m_fDamping,   "step=0.1  max=1 min=0");
-		TwAddVarRW(DUC->g_pTweakBar, "Gravity",    TW_TYPE_BOOLCPP, &m_bGravity, "");
+		TwAddVarRW(DUC->g_pTweakBar, "Mass",       TW_TYPE_FLOAT,      &m_fMass,       "step=0.1  min=0.1");
+		TwAddVarRW(DUC->g_pTweakBar, "Stiffness",  TW_TYPE_FLOAT,      &m_fStiffness,  "step=0.1  min=0.1");
+		TwAddVarRW(DUC->g_pTweakBar, "Damping",    TW_TYPE_FLOAT,      &m_fDamping,    "step=0.1  max=1 min=0");
+		TwAddVarRW(DUC->g_pTweakBar, "Gravity",    TW_TYPE_BOOLCPP,    &m_bGravity,    "");
 		break;
 	default:break;
 	}
@@ -49,9 +49,9 @@ void MassSpringSystemSimulator::reset(){
 
 void MassSpringSystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext){
 	Vec3 white = Vec3(1, 1, 1);
-	Vec3 red = Vec3(1, 0, 0);
+	Vec3 red =   Vec3(1, 0, 0);
 	Vec3 green = Vec3(0, 1, 0);
-	Vec3 blue = Vec3(0, 0, 1);
+	Vec3 blue =  Vec3(0, 0, 1);
 	switch (m_iTestCase)
 	{
 	case 0: // single timestep
@@ -129,6 +129,13 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase){
 			cout << p.to_string();
 		}
 		break;
+	case 4: // leapfrog simulation
+		//initDemo4();
+		cout << "Demo 5: a complex simulation, compare the stability of Euler and Midpoint method\n";
+		for (auto& p : m_vPoints) {
+			cout << p.to_string();
+		}
+		break;
 	default:
 		cout << "Empty Test!\n";
 		break;
@@ -186,6 +193,9 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep){
 			}
 			break;
 		case 2: 
+			// ToDo: implement Leapfrog
+			// timestep_leapfrog(timeStep);
+			addBoundaries();
 			break;
 		}
 		break;
@@ -282,6 +292,8 @@ void MassSpringSystemSimulator::initTable1(){
 }
 
 void MassSpringSystemSimulator::initDemo4(){
+	// ToDo: implement Ferriswheel from Theo
+
 	m_vPoints.clear();
 	m_vSprings.clear();
 	int iNumberOfWantedMasspoints = 8;
@@ -330,6 +342,7 @@ void MassSpringSystemSimulator::timestep_euler(float timeStep){
 		float L = s.m_fInitialLength;
 		float k = m_fStiffness;
 
+		// formula on the slide
 		Vec3 f = (p1.m_vPosition - p2.m_vPosition) * (-k * (l - L) / l);
 
 		 p1.m_vForce+= f;
@@ -340,7 +353,7 @@ void MassSpringSystemSimulator::timestep_euler(float timeStep){
 	for (auto& p : m_vPoints) {
 		Vec3 v = p.m_vVelocity;
 
-		p.m_vForce += v * -m_fDamping;
+		//p.m_vForce += v * -m_fDamping;
 		p.m_vForce -= m_fDamping * p.m_vVelocity;
 	}
 	
@@ -471,14 +484,15 @@ void MassSpringSystemSimulator::addBoundaries(){
 }
 
 std::string MassSpringSystemSimulator::Point::to_string(){
-	cout << "\tp: " << m_vPosition.toString()
-		<< "\n\tv: " << m_vVelocity.toString()
-		<< "\n\ta: " << m_vAcceleration.toString()
-		<< "\n\tf: " << m_vForce.toString() << '\n';
+	std::string s;
+	s = "\tp: " + m_vPosition.toString()
+		+ "\n\tv: " + m_vVelocity.toString()
+		+ "\n\ta: " + m_vAcceleration.toString()
+		+ "\n\tf: " + m_vForce.toString() + '\n';
 		//<< "\n\tm:" << m_fMass << '\n';
 	if (m_bFixed) {
-		cout << "Fixed\n";
+		s += "Fixed\n";
 	}
-	cout << '\n';
-	return std::string();
+	s += '\n';
+	return s;
 }
