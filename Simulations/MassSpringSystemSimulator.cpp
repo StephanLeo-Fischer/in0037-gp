@@ -93,48 +93,36 @@ void MassSpringSystemSimulator::notifyCaseChanged(int testCase){
 		for (auto& p : m_vPoints) {
 			cout << p.to_string();
 		}
-		cout << "timestep_euler(0.005)\n";
-		timestep_euler(0.005);
+		cout << "timestep_euler(0.1)\n";
+		timestep_euler(0.1);
 		for (auto& p : m_vPoints) {
 			cout << p.to_string();
 		}
 		initTable1();
-		cout << "timestep_midpoint(0.005)\n";
-		timestep_midpoint(0.005);
+		cout << "timestep_midpoint(0.1)\n";
+		timestep_midpoint(0.1);
 		for (auto& p : m_vPoints) {
 			cout << p.to_string();
 		}
 		break;
 
 	case 1: // euler simulation
+		m_bGravity = false;
 		initTable1();
-		cout << "Demo 2: a simple Euler simulation - HINT: Please set timestep manually to 0.005 for this Demo\n";
-		for (auto& p : m_vPoints) {
-			cout << p.to_string();
-		}
+		cout << "Demo 2: a simple Euler simulation - HINT: changing the timestep has no effect on the simulation\n";
 		break;
-
 	case 2: // midpoint simulation
+		m_bGravity = false;
 		initTable1();
-		cout << "Demo 3: a simple Midpoint simulation - HINT: Please set timestep manually to 0.005 for this Demo\n";
-		for (auto& p : m_vPoints) {
-			cout << p.to_string();
-		}
+		cout << "Demo 3: a simple Midpoint simulation - HINT: changing the timestep has no effect on the simulation\n";
 		break;
-
 	case 3: // complex simulation
 		initDemo4();
 		cout << "Demo 4: a complex simulation, compare the stability of Euler and Midpoint method\n";
-		for (auto& p : m_vPoints) {
-			cout << p.to_string();
-		}
 		break;
 	case 4: // leapfrog simulation
-		//initDemo4();
-		cout << "Demo 5: a complex simulation, compare the stability of Euler and Midpoint method\n";
-		for (auto& p : m_vPoints) {
-			cout << p.to_string();
-		}
+		initDemo4();
+		cout << "Demo 5: a complex simulation, with Leapfrog method only\n";
 		break;
 	default:
 		cout << "Empty Test!\n";
@@ -170,10 +158,10 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep){
 	case 0: // single timestep 
 		break;
 	case 1: // Euler simulation
-		timestep_euler(timeStep);
+		timestep_euler(0.005);
 		break;
 	case 2: // Midpoint simulation
-		timestep_midpoint(timeStep);
+		timestep_midpoint(0.005);
 		break;
 	case 3: // Complex simulations
 		switch (m_iIntegrator)
@@ -181,23 +169,20 @@ void MassSpringSystemSimulator::simulateTimestep(float timeStep){
 		case 0: 
 			timestep_euler(timeStep); 
 			addBoundaries();
-			for (auto& p : m_vPoints) {
-				cout << p.to_string();
-			}
 			break;
 		case 1: 
 			timestep_midpoint(timeStep); 
 			addBoundaries();
-			for (auto& p : m_vPoints) {
-				cout << p.to_string();
-			}
 			break;
 		case 2: 
-			// ToDo: implement Leapfrog
-			// timestep_leapfrog(timeStep);
+			timestep_leapfrog(timeStep);
 			addBoundaries();
 			break;
 		}
+		break;
+	case 4:
+		timestep_leapfrog(timeStep);
+		addBoundaries();
 		break;
 	default:
 		break;
@@ -278,7 +263,7 @@ void MassSpringSystemSimulator::initTable1(){
 	m_vSprings.clear();
 
 	Vec3& p_0 = Vec3(0, 0, 0);
-	Vec3& p_1 = Vec3(0, 1, 0);
+	Vec3& p_1 = Vec3(0, 2, 0);
 	Vec3& v_0 = Vec3(-1, 0, 0);
 	Vec3& v_1 = Vec3(1, 0, 0);
 	
@@ -292,7 +277,7 @@ void MassSpringSystemSimulator::initTable1(){
 }
 
 void MassSpringSystemSimulator::initDemo4(){
-	// ToDo: implement Ferriswheel from Theo
+	// ToDo: implement Ferris wheel from Theo
 
 	m_vPoints.clear();
 	m_vSprings.clear();
@@ -322,8 +307,7 @@ float MassSpringSystemSimulator::distance(Point p1, Point p2){
 	return sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
 }
 
-void MassSpringSystemSimulator::timestep_euler(float timeStep){
-	// reset forces	
+void MassSpringSystemSimulator::resetForces() {
 	for (auto& p : m_vPoints) {
 		if (m_bGravity) {
 			p.m_vForce = Vec3(0, -9.81, 0);
@@ -332,8 +316,9 @@ void MassSpringSystemSimulator::timestep_euler(float timeStep){
 			p.m_vForce = Vec3(0, 0, 0);
 		}
 	}
-	
-	// calc Forces
+}
+
+void MassSpringSystemSimulator::calculateForces() {
 	for (auto& s : m_vSprings) {
 		Point& p1 = m_vPoints.at(s.m_pPoints.first);
 		Point& p2 = m_vPoints.at(s.m_pPoints.second);
@@ -345,34 +330,54 @@ void MassSpringSystemSimulator::timestep_euler(float timeStep){
 		// formula on the slide
 		Vec3 f = (p1.m_vPosition - p2.m_vPosition) * (-k * (l - L) / l);
 
-		 p1.m_vForce+= f;
-		 p2.m_vForce-= f;
+		p1.m_vForce += f;
+		p2.m_vForce -= f;
 	}
+}
 
-	// additional damping
+void MassSpringSystemSimulator::calculateDamping(){
 	for (auto& p : m_vPoints) {
 		Vec3 v = p.m_vVelocity;
 
 		//p.m_vForce += v * -m_fDamping;
 		p.m_vForce -= m_fDamping * p.m_vVelocity;
 	}
-	
-	// update current positions
+}
+
+void MassSpringSystemSimulator::updateCurrentPosition(float timeStep){
 	for (auto& p : m_vPoints) {
 		if (!p.m_bFixed) {
 			p.m_vPosition += p.m_vVelocity * timeStep;
 		}
 	}
+}
 
-	// update current velocities
+void MassSpringSystemSimulator::updateCurrentVelocities(float timeStep){
 	for (auto& p : m_vPoints) {
 		if (!p.m_bFixed) {
 			p.m_vVelocity += p.m_vForce * (timeStep / p.m_fMass);
 		}
-		else{
+		else {
 			p.m_vVelocity = Vec3(0, 0, 0);
 		}
 	}
+}
+
+void MassSpringSystemSimulator::timestep_euler(float timeStep){
+	// reset forces	
+	resetForces();
+	
+	// calc Forces
+	calculateForces();
+
+	// additional damping
+	calculateDamping();
+	
+	// update current positions
+	updateCurrentPosition(timeStep);
+
+	// update current velocities
+	updateCurrentVelocities(timeStep);
 }
 
 void MassSpringSystemSimulator::timestep_midpoint(float timeStep){
@@ -384,88 +389,55 @@ void MassSpringSystemSimulator::timestep_midpoint(float timeStep){
 	}
 
 	// reset forces	
-	for (auto& p : m_vPoints) {
-		if (m_bGravity) {
-			p.m_vForce = Vec3(0, -9.81, 0);
-		}
-		else {
-			p.m_vForce = Vec3(0, 0, 0);
-		}
-	}
+	resetForces();
 
 	// calc Forces
-	for (auto& s : m_vSprings) {
-		Point& p1 = m_vPoints.at(s.m_pPoints.first);
-		Point& p2 = m_vPoints.at(s.m_pPoints.second);
-
-		float l = distance(p1, p2);
-		float L = s.m_fInitialLength;
-		float k = m_fStiffness;
-
-		Vec3 f = (p1.m_vPosition - p2.m_vPosition) * (-k * (l - L) / l);
-
-		p1.m_vForce += f;
-		p2.m_vForce -= f;
-	}
+	calculateForces();
 
 	// update current positions /2
-	for (auto& p : m_vPoints) {
-		if (!p.m_bFixed) {
-			p.m_vPosition += p.m_vVelocity * timeStep/2;
-		}
-	}
+	updateCurrentPosition(timeStep / 2);
 
 	// update current velocities /2
-	for (auto& p : m_vPoints) {
-		if (!p.m_bFixed) {
-			p.m_vVelocity += p.m_vForce * ((timeStep/2) / p.m_fMass);
-		}
-		else {
-			p.m_vVelocity = Vec3(0, 0, 0);
-		}
-	}
+	updateCurrentVelocities(timeStep / 2);
+
+	// reset forces
+	resetForces();
 
 	// calc Forces with new positions
-	for (auto& s : m_vSprings) {
-		Point& p1 = m_vPoints.at(s.m_pPoints.first);
-		Point& p2 = m_vPoints.at(s.m_pPoints.second);
-
-		float l = distance(p1, p2);
-		float L = s.m_fInitialLength;
-		float k = m_fStiffness;
-
-		Vec3 f = (p1.m_vPosition - p2.m_vPosition) * (-k * (l - L) / l);
-
-		p1.m_vForce += f;
-		p2.m_vForce -= f;
-	}
+	calculateForces();
 
 	// restore old positions
 	for (int i = 0; i < m_vPoints.size(); ++i) {
 		m_vPoints.at(i).m_vPosition = old_pos.at(i);
 	}
 
-	// update current positions /2
-	for (auto& p : m_vPoints) {
-		if (!p.m_bFixed) {
-			p.m_vPosition += p.m_vVelocity * timeStep;
-		}
-	}
+	// update current positions
+	updateCurrentPosition(timeStep);
 
 	// restore old velocities
 	for (int i = 0; i < m_vPoints.size(); ++i) {
 		m_vPoints.at(i).m_vVelocity = old_vel.at(i);
 	}
 
-	// update current velocities /2
-	for (auto& p : m_vPoints) {
-		if (!p.m_bFixed) {
-			p.m_vVelocity += p.m_vForce * (timeStep / p.m_fMass);
-		}
-		else {
-			p.m_vVelocity = Vec3(0, 0, 0);
-		}
-	}
+	// update current velocities
+	updateCurrentVelocities(timeStep);
+}
+
+void MassSpringSystemSimulator::timestep_leapfrog(float timeStep){
+	// reset forces	
+	resetForces();
+
+	// calc Forces
+	calculateForces();
+
+	// additional damping
+	calculateDamping();
+
+	// update current velocities
+	updateCurrentVelocities(timeStep);
+
+	// update current positions
+	updateCurrentPosition(timeStep);
 }
 
 void MassSpringSystemSimulator::addBoundaries(){

@@ -85,8 +85,16 @@ private:
 	void initTable1();
 	void initDemo4();
 	float distance(Point p1, Point p2);
+
+	void resetForces();
+	void calculateForces();
+	void calculateDamping();
+	void updateCurrentPosition(float timeStep);
+	void updateCurrentVelocities(float timeStep);
+
 	void timestep_euler(float timeStep);
 	void timestep_midpoint(float timeStep);
+	void timestep_leapfrog(float timeStep);
 	void addBoundaries();
 };
 #endif
