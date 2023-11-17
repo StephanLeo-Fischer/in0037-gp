@@ -31,6 +31,7 @@ public:
 	void setStiffness(float stiffness);
 	void setDampingFactor(float damping);
 	int addMassPoint(Vec3 position, Vec3 velocity, bool isFixed);
+	void addSpring(int masspoint1, int masspoint2);
 	void addSpring(int masspoint1, int masspoint2, float initialLength);
 	int getNumberOfMassPoints();
 	int getNumberOfSprings();
@@ -56,40 +57,52 @@ private:
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
 
-	// Stephan's additional Attributes
+	// Additional Attributes
 	struct Point {
 		Vec3 m_vPosition;
 		Vec3 m_vVelocity;
-		Vec3 m_vAcceleration;
 		Vec3 m_vForce;
 		bool m_bFixed;
-		float m_fMass = 10;
+		float m_fMass;
+
+		Point(Vec3 position, Vec3 velocity, bool isFixed, float mass) :
+			m_vPosition(position),
+			m_vVelocity(velocity),
+			m_vForce(0.0),
+			m_bFixed(isFixed),
+			m_fMass(mass) {}
+
 		std::string to_string();
 	};
 
 	struct Spring {
-		pair<int, int> m_pPoints;
+		int m_pPoint1;
+		int m_pPoint2;
 		float m_fInitialLength;
 		float m_fStiffness;
-		float m_fDamping;
+
+		Spring(int point1, int point2, float initialLength, float stiffness) :
+			m_pPoint1(point1),
+			m_pPoint2(point2),
+			m_fInitialLength(initialLength),
+			m_fStiffness(stiffness) {}
 	};
 
 	vector<Spring> m_vSprings;
 	vector<Point> m_vPoints;
 
-	float scale = .01;
-	Vec3 size_of_ball = Vec3(scale);
-	bool executed = false;
-	bool m_bGravity = false;
+	Vec3 size_of_ball = Vec3(0.01f);
+
+	// If we want to apply external forces (like gravity) to all the balls, or not:
+	bool m_bApplyExternalForces = true;
 	
 	void initTable1();
 	void initDemo4();
-	float distance(Point p1, Point p2);
 
 	void resetForces();
 	void calculateForces();
 	void calculateDamping();
-	void updateCurrentPosition(float timeStep);
+	void updateCurrentPositions(float timeStep);
 	void updateCurrentVelocities(float timeStep);
 
 	void timestep_euler(float timeStep);
