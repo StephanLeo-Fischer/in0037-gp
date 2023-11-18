@@ -95,6 +95,8 @@ private:
 
 	// If we want to apply external forces (like gravity) to all the balls, or not:
 	bool m_bApplyExternalForces = true;
+	// how much should the points bounce off of the walls? 1 = same velocity
+	float m_fWallBounceFactor = 1;
 	
 	void initTable1();
 	void initDemo4();

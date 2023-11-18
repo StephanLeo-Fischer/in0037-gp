@@ -39,6 +39,7 @@ void MassSpringSystemSimulator::initUI(DrawingUtilitiesClass* DUC){
 		TwAddVarRW(DUC->g_pTweakBar, "Stiffness",  TW_TYPE_FLOAT,      &m_fStiffness,  "step=0.1  min=0.1");
 		TwAddVarRW(DUC->g_pTweakBar, "Damping",    TW_TYPE_FLOAT,      &m_fDamping,    "step=0.1  max=1 min=0");
 		TwAddVarRW(DUC->g_pTweakBar, "Gravity",    TW_TYPE_BOOLCPP,    &m_bApplyExternalForces, "");
+		TwAddVarRW(DUC->g_pTweakBar, "Bounce Factor", TW_TYPE_FLOAT, &m_fWallBounceFactor, "step=0.1  max=3 min=-1");
 		break;
 	default:break;
 	}
@@ -451,16 +452,29 @@ void MassSpringSystemSimulator::timestep_leapfrog(float timeStep){
 
 void MassSpringSystemSimulator::addBoundaries(){
 	float max = 10;
+	float floorHeight = -1;
 
 	for (Point& p : m_vPoints) {
-		if (p.m_vPosition.x > max || p.m_vPosition.x < -max){
-			p.m_vVelocity.x *= -1;
+		if (p.m_vPosition.x > max) {  // x
+			p.m_vPosition.x = max;
+			p.m_vVelocity.x *= -1 * m_fWallBounceFactor;
+		} else if (p.m_vPosition.x < -max) {
+			p.m_vPosition.x = -max;
+			p.m_vVelocity.x *= -1 * m_fWallBounceFactor;
 		}
-		if (p.m_vPosition.y > max || p.m_vPosition.y < -1) {
-			p.m_vVelocity.y *= -1;
+		if (p.m_vPosition.y > max) {  // y
+			p.m_vPosition.y = max;
+			p.m_vVelocity.y *= -1 * m_fWallBounceFactor;
+		} else if (p.m_vPosition.y < floorHeight) {
+			p.m_vPosition.y = -1;
+			p.m_vVelocity.y *= -1 * m_fWallBounceFactor;
 		}
-		if (p.m_vPosition.z > max || p.m_vPosition.z < -max) {
-			p.m_vVelocity.z *= -1;
+		if (p.m_vPosition.z > max) {  // z
+			p.m_vPosition.z = max;
+			p.m_vVelocity.z *= -1 * m_fWallBounceFactor;
+		} else if (p.m_vPosition.z < -max) {
+			p.m_vPosition.z = -max;
+			p.m_vVelocity.z *= -1 * m_fWallBounceFactor;
 		}
 	}
 }
