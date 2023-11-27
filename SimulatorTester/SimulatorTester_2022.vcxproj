@@ -163,11 +163,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-<<<<<<< HEAD
-    <ClCompile Include="PublicMassSpringSystemTests.cpp" />
-=======
     <ClCompile Include="PublicRigidBodiesTests.cpp" />
->>>>>>> upstream/Ex2
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AntTweakBar\src\AntTweakBar_2022.vcxproj">
