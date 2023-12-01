@@ -209,6 +209,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Simulations\main.cpp" />
+    <ClCompile Include="..\Simulations\RigidBodySystemSimulator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AntTweakBar\src\AntTweakBar_2022.vcxproj">
