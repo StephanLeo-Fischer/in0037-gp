@@ -1,5 +1,5 @@
 #include "CppUnitTest.h"
-#include "MassSpringSystemSimulator.h"
+#include "../Simulations/MassSpringSystemSimulator.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 

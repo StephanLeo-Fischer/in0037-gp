@@ -1,12 +1,20 @@
 #ifndef RIGIDBODYSYSTEMSIMULATOR_h
 #define RIGIDBODYSYSTEMSIMULATOR_h
 #include "Simulator.h"
+
 //add your header for your rigid body system, for e.g.,
 //#include "rigidBodySystem.h" 
+#include "Rigidbody.h"
 
 #define TESTCASEUSEDTORUNTEST 2
 
-class RigidBodySystemSimulator:public Simulator{
+#define DEMO1_ONESTEP 0
+#define DEMO2_SINGLE_BODY 1
+#define DEMO3_COLLISION 2
+#define DEMO4_COMPLEX 3
+
+
+class RigidBodySystemSimulator:public Simulator {
 public:
 	// Construtors
 	RigidBodySystemSimulator();
@@ -18,7 +26,7 @@ public:
 	void drawFrame(ID3D11DeviceContext* pd3dImmediateContext);
 	void notifyCaseChanged(int testCase);
 	void externalForcesCalculations(float timeElapsed);
-	void simulateTimestep(float timeStep);
+	void simulateTimestep(float timestep);
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
@@ -42,5 +50,15 @@ private:
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
-	};
+
+	vector<Rigidbody> m_vRigidbodies;
+
+	// For debug only:
+	boolean stopSimulation = false;
+	Vec3 collisionPosition;
+
+	void setupDemo1();
+	void setupDemo2();
+	void manageCollisions();
+};
 #endif
