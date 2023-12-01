@@ -33,6 +33,7 @@ public:
 	void setVelocityOf(int i, Vec3 velocity);
 
 	void initTable1();
+	void timestepEuler(float timestep);
 
 private:
 	// Attributes
@@ -44,5 +45,31 @@ private:
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
+
+
+	struct Rigidbox
+	{
+		Vec3 m_vPosition;
+		Quat m_vOrientation;
+		Vec3 m_vSize;
+		Vec3 m_vVelocity; 
+		Vec3 m_vAngularVelocity;
+		Vec3 m_vForce;
+		float m_fMass;
+
+		Rigidbox(Vec3 position, Quat orientation, Vec3 size, Vec3 velocity, Vec3 angularVelocity, float mass) :
+			m_vPosition(position),
+			m_vOrientation(orientation),
+			m_vSize(size),
+			m_vVelocity(velocity),
+			m_vAngularVelocity(angularVelocity),
+			m_vForce(0.0),
+			m_fMass(mass) {}
+
+		std::string toString();
 	};
+
+	vector<Rigidbox> m_vRigidboxes;
+
+};
 #endif

@@ -3,6 +3,12 @@
 #include "RigidBodySystemSimulator.h"
 #include "RigidBodySystemSimulator.h"
 #include "RigidBodySystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
 
 RigidBodySystemSimulator::RigidBodySystemSimulator()
 {
@@ -28,6 +34,36 @@ void RigidBodySystemSimulator::onMouse(int x, int y) {
 	m_oldtrackmouse.y = y;
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
+}
+
+int RigidBodySystemSimulator::getNumberOfRigidBodies()
+{
+	return m_vRigidboxes.size();
+}
+
+Vec3 RigidBodySystemSimulator::getPositionOfRigidBody(int i)
+{
+	return m_vRigidboxes.at(i).m_vPosition;
+}
+
+Vec3 RigidBodySystemSimulator::getLinearVelocityOfRigidBody(int i)
+{
+	return m_vRigidboxes.at(i).m_vVelocity;
+}
+
+Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
+{
+	return m_vRigidboxes.at(i).m_vAngularVelocity;
+}
+
+void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
+{
+	m_vRigidboxes.push_back(Rigidbox(position, Quat(), size, Vec3(), Vec3(), mass));
+}
+
+void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
+{
+	m_vRigidboxes.at(i).m_vOrientation = orientation;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -72,22 +108,20 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 	case 0: // single timestep
 		initTable1();
 		cout << "Demo 1, a simple one-step test\n";
-		//for (auto& p : m_vPoints) {
-		//	cout << p.to_string();
-		//}
-		//cout << "timestep_euler(0.1)\n";
-		//timestep_euler(0.1);
-		//for (auto& p : m_vPoints) {
-		//	cout << p.to_string();
-		//}
+		for (auto& r : m_vRigidboxes) {
+			cout << r.toString();
+		}
+		cout << "timestep_euler(2)\n";
+		timestepEuler(2);
+		for (auto& p : m_vRigidboxes) {
+			cout << p.toString();
+		}
 		break;
 
 	case 1: // single body simulation
-		initTable1();
 		cout << "Demo 2: a simple Euler simulation - HINT: changing the timestep has no effect on the simulation\n";
 		break;
 	case 2: // 2 RB collision
-		initTable1();
 		cout << "Demo 3: a simple Midpoint simulation - HINT: changing the timestep has no effect on the simulation\n";
 		break;
 	case 3: // complex simulation
@@ -124,5 +158,34 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 
 void RigidBodySystemSimulator::initTable1() 
 {
+	m_vRigidboxes.clear();
 
+	Vec3 pos = Vec3(0, 0, 0);
+	Vec3 size = Vec3(1, 0.6, 0.5);
+
+	addRigidBody(pos, size, 2);
+}
+
+void RigidBodySystemSimulator::timestepEuler(float timeStep) {
+	// calc Forces
+	Vec3 force = Vec3(1, 1, 0);
+
+	// additional damping
+	calculateDamping();
+
+	// update current positions
+	updateCurrentPositions(timeStep);
+
+	// update current velocities
+	updateCurrentVelocities(timeStep);
+}
+
+std::string RigidBodySystemSimulator::Rigidbox::toString() {
+	std::string s;
+	s = "\tp: " + m_vPosition.toString()
+		+ "\n\tv: " + m_vVelocity.toString()
+		+ "\n\tf: " + m_vForce.toString() + '\n';
+	//<< "\n\tm:" << m_fMass << '\n';
+	s += '\n';
+	return s;
 }
