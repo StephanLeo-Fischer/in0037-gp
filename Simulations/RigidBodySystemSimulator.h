@@ -32,6 +32,8 @@ public:
 	void setOrientationOf(int i,Quat orientation);
 	void setVelocityOf(int i, Vec3 velocity);
 
+	void initTable1();
+
 private:
 	// Attributes
 	// add your RigidBodySystem data members, for e.g.,
