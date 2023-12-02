@@ -174,11 +174,29 @@ void RigidBodySystemSimulator::initTable1()
 }
 
 void RigidBodySystemSimulator::timestepEuler(float timeStep) {
-	// calc Forces
-	Vec3 force = Vec3(1, 1, 0);
+	// single time step impl here. TODO in ne andere func
 
-	// additional damping
-	//calculateDamping();
+	Vec3 force = Vec3(1, 1, 0);
+	Vec3 forcePos = Vec3(0.3, 0.5, 0.25);
+
+	for (auto& rb : m_vRigidboxes) 
+	{
+
+
+		rb.m_vPosition += timeStep * rb.m_vVelocity;
+		rb.m_vVelocity += timeStep * rb.m_vForce / rb.m_fMass;
+		rb.m_qOrientation += (timeStep / 2) * Quat(rb.m_vAngularVelocity.x, rb.m_vAngularVelocity.y, rb.m_vAngularVelocity.z, 0) * rb.m_qOrientation;
+		rb.m_vMomentum += timeStep * rb.m_vTorque;
+		Mat4 transposedRotation = rb.m_mRotation;
+		transposedRotation.transpose();
+		Mat4 inertiaTensorInverse = rb.m_mRotation * rb.m_mInitialInersiaTensorInverse * transposedRotation;
+		rb.m_vAngularVelocity = inertiaTensorInverse * rb.m_vMomentum;
+
+		
+
+	}
+
+	//m_vRigidboxes.back().
 
 	// update current positions
 	//updateCurrentPositions(timeStep);

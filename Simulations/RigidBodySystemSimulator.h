@@ -58,7 +58,7 @@ private:
 		float m_fMass;
 		Vec3 m_vAcceleration;
 		Vec3 m_vMomentum;
-		Mat4 m_mInitialInersiaTensor;
+		Mat4 m_mInitialInersiaTensorInverse;
 		Mat4 m_mInersiaTensor;
 		Mat4 m_mRotation;
 		Vec3 m_vTorque;
@@ -78,7 +78,8 @@ private:
 			Mat4 matC = Mat4(c11, 0, 0, 0,   0, c22, 0, 0,    0, 0, c33, 0,    0, 0, 0, 0);
 			float traceC = (c11 + c22 + c33);
 			Mat4 inertiaI0 = Mat4(traceC, 0, 0, 0,    0, traceC, 0, 0,    0, 0, traceC, 0,    0, 0, 0, 0) - matC;
-			m_mInitialInersiaTensor = inertiaI0;
+			m_mInitialInersiaTensorInverse = inertiaI0.inverse();
+
 
 			// von stephan kopiert
 			Mat4 matrix;
