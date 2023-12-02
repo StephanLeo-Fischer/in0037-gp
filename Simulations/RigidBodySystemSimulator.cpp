@@ -58,12 +58,12 @@ Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
 {
-	m_vRigidboxes.push_back(Rigidbox(position, Quat(), size, Vec3(), Vec3(), mass));
+	m_vRigidboxes.push_back(Rigidbox(position, size, mass));
 }
 
 void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
 {
-	m_vRigidboxes.at(i).m_vOrientation = orientation;
+	m_vRigidboxes.at(i).m_qOrientation = orientation;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -98,12 +98,12 @@ void RigidBodySystemSimulator::reset() {
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
-	for (auto& r : m_vRigidboxes) 
+	for (auto& rb : m_vRigidboxes) 
 	{
 		DUC->setUpLighting(Vec3(0, 0, 0), 0.4 * Vec3(1, 1, 1), 2000.0, Vec3(0.5, 0.5, 0.5));
-		r.Obj2WorldMatrix = BodyA.scaleMat * BodyA.rotMat * BodyA.translatMat;
-		DUC->drawRigidBody(BodyA.Obj2WorldMatrix);
+		DUC->drawRigidBody(rb.m_mObjToWorld);
 	}
+
 }
 
 void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
@@ -114,13 +114,13 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 	case 0: // single timestep
 		initTable1();
 		cout << "Demo 1, a simple one-step test\n";
-		for (auto& r : m_vRigidboxes) {
-			cout << r.toString();
+		for (auto& rb : m_vRigidboxes) {
+			cout << rb.toString();
 		}
-		cout << "timestep_euler(2)\n";
+		cout << "timestepEuler(2)\n";
 		timestepEuler(2);  // 1 step
-		for (auto& p : m_vRigidboxes) {
-			cout << p.toString();
+		for (auto& rb : m_vRigidboxes) {
+			cout << rb.toString();
 		}
 		break;
 

@@ -50,7 +50,7 @@ private:
 	struct Rigidbox
 	{
 		Vec3 m_vPosition;
-		Quat m_vOrientation;
+		Quat m_qOrientation;
 		Vec3 m_vSize;
 		Vec3 m_vVelocity; 
 		Vec3 m_vAngularVelocity;
@@ -62,6 +62,10 @@ private:
 		Mat4 m_mInersiaTensor;
 		Mat4 m_mRotation;
 		Vec3 m_vTorque;
+		Mat4 m_mObjToWorld;
+		Mat4 m_mWorldToObj;
+		Mat4 m_mScaledObjToWorld;
+		Mat4 m_mWorldToScaledObj;
 
 		Rigidbox(Vec3 position, Vec3 size, float mass) :
 			m_vPosition(position),
@@ -75,6 +79,15 @@ private:
 			float traceC = (c11 + c22 + c33);
 			Mat4 inertiaI0 = Mat4(traceC, 0, 0, 0,    0, traceC, 0, 0,    0, 0, traceC, 0,    0, 0, 0, 0) - matC;
 			m_mInitialInersiaTensor = inertiaI0;
+
+			// von stephan kopiert
+			Mat4 matrix;
+			matrix.initTranslation(m_vPosition.x, m_vPosition.y, m_vPosition.z);
+			m_mScaledObjToWorld = m_qOrientation.getRotMat() * matrix;
+			m_mWorldToScaledObj = m_mScaledObjToWorld.inverse();
+			matrix.initScaling(m_vSize.x, m_vSize.y, m_vSize.z);
+			m_mObjToWorld = matrix * m_mScaledObjToWorld;
+			m_mWorldToObj = m_mObjToWorld.inverse();
 		}
 
 		std::string toString();
