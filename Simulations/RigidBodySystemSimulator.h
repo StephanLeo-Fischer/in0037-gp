@@ -56,15 +56,26 @@ private:
 		Vec3 m_vAngularVelocity;
 		Vec3 m_vForce;
 		float m_fMass;
+		Vec3 m_vAcceleration;
+		Vec3 m_vMomentum;
+		Mat4 m_mInitialInersiaTensor;
+		Mat4 m_mInersiaTensor;
+		Mat4 m_mRotation;
+		Vec3 m_vTorque;
 
-		Rigidbox(Vec3 position, Quat orientation, Vec3 size, Vec3 velocity, Vec3 angularVelocity, float mass) :
+		Rigidbox(Vec3 position, Vec3 size, float mass) :
 			m_vPosition(position),
-			m_vOrientation(orientation),
 			m_vSize(size),
-			m_vVelocity(velocity),
-			m_vAngularVelocity(angularVelocity),
-			m_vForce(0.0),
-			m_fMass(mass) {}
+			m_fMass(mass) 
+		{
+			float c11 = 8 * mass * size.x * size.x;
+			float c22 = 8 * mass * size.y * size.y;
+			float c33 = 8 * mass * size.z * size.z;
+			Mat4 matC = Mat4(c11, 0, 0, 0,   0, c22, 0, 0,    0, 0, c33, 0,    0, 0, 0, 0);
+			float traceC = (c11 + c22 + c33);
+			Mat4 inertiaI0 = Mat4(traceC, 0, 0, 0,    0, traceC, 0, 0,    0, 0, traceC, 0,    0, 0, 0, 0) - matC;
+			m_mInitialInersiaTensor = inertiaI0;
+		}
 
 		std::string toString();
 	};

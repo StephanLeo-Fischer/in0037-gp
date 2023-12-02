@@ -98,6 +98,12 @@ void RigidBodySystemSimulator::reset() {
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
+	for (auto& r : m_vRigidboxes) 
+	{
+		DUC->setUpLighting(Vec3(0, 0, 0), 0.4 * Vec3(1, 1, 1), 2000.0, Vec3(0.5, 0.5, 0.5));
+		r.Obj2WorldMatrix = BodyA.scaleMat * BodyA.rotMat * BodyA.translatMat;
+		DUC->drawRigidBody(BodyA.Obj2WorldMatrix);
+	}
 }
 
 void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
@@ -112,7 +118,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 			cout << r.toString();
 		}
 		cout << "timestep_euler(2)\n";
-		timestepEuler(2);
+		timestepEuler(2);  // 1 step
 		for (auto& p : m_vRigidboxes) {
 			cout << p.toString();
 		}
@@ -143,6 +149,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase)
 	{
 	case 0: // single timestep
+		// This case requires only one update, and is thus handled by notifyCaseChanged()
 		break;
 
 	case 1: // single body simulation
@@ -171,13 +178,13 @@ void RigidBodySystemSimulator::timestepEuler(float timeStep) {
 	Vec3 force = Vec3(1, 1, 0);
 
 	// additional damping
-	calculateDamping();
+	//calculateDamping();
 
 	// update current positions
-	updateCurrentPositions(timeStep);
+	//updateCurrentPositions(timeStep);
 
 	// update current velocities
-	updateCurrentVelocities(timeStep);
+	//updateCurrentVelocities(timeStep);
 }
 
 std::string RigidBodySystemSimulator::Rigidbox::toString() {
