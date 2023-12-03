@@ -56,11 +56,15 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
 
 void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 {
+	rigidbodies.clear();
 	m_iTestCase = testCase;
 	switch (m_iTestCase)
 	{
 	case 0:
 		cout << "Demo 1!\n";
+		initDemo1();
+		eulerStep(2.0);
+		printResults();
 		break;
 	case 1:
 		cout << "Demo 2!\n";
@@ -121,10 +125,12 @@ Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
 
 void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 loc, Vec3 force)
 {
+	rigidbodies.at(i).addForce(loc, force);
 }
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
 {
+	rigidbodies.push_back(Rigidbody(position, size, (float)mass));
 }
 
 void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
@@ -133,4 +139,25 @@ void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
 
 void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity)
 {
+}
+
+void RigidBodySystemSimulator::initDemo1()
+{
+	addRigidBody(Vec3(), Vec3(1, 0.6, 0.5), 2);
+	applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
+}
+
+void RigidBodySystemSimulator::printResults()
+{
+	cout << "Linear Velocity: " << rigidbodies.at(0).linearVelocity << endl;
+	cout << "Angular Velocity: " << rigidbodies.at(0).angularVelocity << endl;
+}
+
+void RigidBodySystemSimulator::eulerStep(float timeStep)
+{
+	for (Rigidbody& r : rigidbodies) {
+		r.linearEulerStep(timeStep);
+		r.clearForces();
+	}
+
 }

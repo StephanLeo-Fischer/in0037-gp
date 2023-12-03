@@ -34,14 +34,19 @@ public:
 	void setVelocityOf(int i, Vec3 velocity);
 
 private:
-	// Attributes
-	// add your RigidBodySystem data members, for e.g.,
-	// RigidBodySystem * m_pRigidBodySystem; 
+	// Rigidbody Attributes
 	Vec3 m_externalForce;
+	vector<Rigidbody> rigidbodies;
 
 	// UI Attributes
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
+
+	// Simulation Functions
+	void initDemo1();
+	void printResults();
+
+	void eulerStep(float timeStep);
 	};
 #endif
