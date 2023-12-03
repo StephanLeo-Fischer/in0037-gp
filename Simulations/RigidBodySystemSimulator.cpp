@@ -143,21 +143,30 @@ void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity)
 
 void RigidBodySystemSimulator::initDemo1()
 {
-	addRigidBody(Vec3(), Vec3(1, 0.6, 0.5), 2);
+	addRigidBody(Vec3(), Vec3(1, 0.6, 0.5), 2, Vec3(0, 0, 90));
 	applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
 }
 
 void RigidBodySystemSimulator::printResults()
 {
-	cout << "Linear Velocity: " << rigidbodies.at(0).linearVelocity << endl;
-	cout << "Angular Velocity: " << rigidbodies.at(0).angularVelocity << endl;
+	Rigidbody& r = rigidbodies.at(0);
+	cout << "Linear Velocity: " << r.linearVelocity << endl;
+	cout << "Angular Velocity: " << r.angularVelocity << endl;
+	cout << "World Velocity of Point (-0.3, -0.5, -0.25): " << r.worldVelocityOfPoint(Vec3(-0.3, -0.5, -0.25)) << endl;
+	cout << "World Velocity of Point (0.3, 0.5, 0.25): " << r.worldVelocityOfPoint(Vec3(0.3, 0.5, 0.25)) << endl;
 }
 
 void RigidBodySystemSimulator::eulerStep(float timeStep)
 {
 	for (Rigidbody& r : rigidbodies) {
 		r.linearEulerStep(timeStep);
+		r.angularEulerStep(timeStep);
 		r.clearForces();
 	}
 
+}
+
+void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass, Vec3 rotation)
+{
+	rigidbodies.push_back(Rigidbody(position, size, (float)mass, rotation));
 }

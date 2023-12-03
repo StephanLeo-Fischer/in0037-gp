@@ -48,5 +48,8 @@ private:
 	void printResults();
 
 	void eulerStep(float timeStep);
+
+	//Additional Functions
+	void addRigidBody(Vec3 position, Vec3 size, int mass, Vec3 rotation);
 	};
 #endif
