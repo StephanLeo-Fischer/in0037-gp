@@ -241,6 +241,7 @@ void RigidBodySystemSimulator::setupComplex()
 	m_vRigidbodies.clear();
 
 	Rigidbody ground = Rigidbody(1000, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	ground.setKinematic(true);
 
 	Rigidbody box1 = Rigidbody(1, Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0.6));
 	Rigidbody box2 = Rigidbody(1, Vec3(0, 1, 0), Vec3(0, 0, 0), Vec3(0.4));

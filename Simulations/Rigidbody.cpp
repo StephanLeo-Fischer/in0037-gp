@@ -3,11 +3,13 @@
 
 #define RADIANS(deg) (deg * M_PI / 180)
 
-Rigidbody::Rigidbody(float mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
+Rigidbody::Rigidbody(float mass, Vec3 position, Vec3 rotation, Vec3 scale) :
 	m_fMass(mass),
 	m_vPosition(position),
 	m_qRotation(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)),
 	m_vScale(scale.x, scale.y, scale.z),
+
+	m_bIsKinematic(false),
 
 	m_vLinearVelocity(0.0), 
 	m_vAngularVelocity(0.0), 
@@ -29,41 +31,46 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC) const
 	DUC->drawLine(m_vPosition, Vec3(0, 0, 0), m_vPosition + m_vLinearVelocity, Vec3(0, 0, 1));
 	DUC->drawLine(m_vPosition, Vec3(0, 0, 0), m_vPosition + m_vAngularVelocity, Vec3(1, 0, 0));
 	DUC->drawLine(m_vPosition, Vec3(0, 0, 0), m_vPosition + m_vAngularMomentum, Vec3(1, 1, 0));
-	DUC->drawLine(testCollisionCenter, Vec3(0, 0, 0), testCollisionCenter + testNormalCollision, Vec3(0, 1, 0));
 	DUC->endLine();
 }
 
 void Rigidbody::timestepEuler(float timestep)
 {
-	m_vPosition += timestep * m_vLinearVelocity;
-	m_vLinearVelocity += timestep * m_vSumForces / m_fMass;
-
 	Quat w = Quat(m_vAngularVelocity.x, m_vAngularVelocity.y, m_vAngularVelocity.z, 0);
+	
+	m_vPosition += timestep * m_vLinearVelocity;
 	m_qRotation = (m_qRotation + 0.5 * timestep * w * m_qRotation).unit();
 
 	// Update the rotation and transformation matrices, since we changed the rotation and position of the rigidbody:
 	updateTransformMatrices();
 
-	// Update the angular momentum:
-	m_vAngularMomentum += timestep * computeTorque();
+	if (!m_bIsKinematic) {
+		// Update the linear velocity, and angular momentum:
+		m_vLinearVelocity += timestep * m_vSumForces / m_fMass;
+		m_vAngularMomentum += timestep * computeTorque();
 
-	// Update the current inertial tensor, and use it to update the angular velocity:
-	m_mCurrentInvInertialTensor = computeCurrentInvInertialTensor();
-
-	m_vAngularVelocity = m_mCurrentInvInertialTensor.transformVector(m_vAngularMomentum);
+		// Update the current inertial tensor, and use it to update the angular velocity:
+		m_mCurrentInvInertialTensor = computeCurrentInvInertialTensor();
+		m_vAngularVelocity = m_mCurrentInvInertialTensor.transformVector(m_vAngularMomentum);
+	}
 }
 
 void Rigidbody::applyTorque(Vec3 location, Vec3 force) {
-	pair<Vec3, Vec3> torque;
-	torque.first = location;
-	torque.second = force;
+	// If the object is kinematic, ignore the forces applied to it:
+	if (!m_bIsKinematic) {
+		pair<Vec3, Vec3> torque;
+		torque.first = location;
+		torque.second = force;
 
-	this->m_vSumForces += force;
-	this->m_vTorques.push_back(torque);
+		this->m_vSumForces += force;
+		this->m_vTorques.push_back(torque);
+	}
 }
 
 void Rigidbody::applyForce(Vec3 force) {
-	this->m_vSumForces += force;
+	// If the object is kinematic, ignore the forces applied to it:
+	if(!m_bIsKinematic)
+		this->m_vSumForces += force;
 }
 
 void Rigidbody::clearForces() {
@@ -72,7 +79,6 @@ void Rigidbody::clearForces() {
 }
 
 float Rigidbody::getMass() const { return m_fMass; }
-
 void Rigidbody::setMass(float mass) {
 	this->m_fMass = mass;
 	updateInertialTensors();
@@ -101,16 +107,35 @@ void Rigidbody::setScale(Vec3 scale) {
 	updateInertialTensors();
 }
 
+void Rigidbody::setKinematic(boolean isKinematic) { 
+	this->m_bIsKinematic = true;
+
+	if (isKinematic) {
+		// If the object is kinematic, ignore the forces applied to it:
+		m_mCurrentInvInertialTensor = 0;
+		m_vAngularMomentum = 0;
+		clearForces();
+	}
+	else {
+		// Else, update the current inertial tensor and angular momentum of the rigidbody,
+		// based on it's orientation and angular speed:
+		m_mCurrentInvInertialTensor = computeCurrentInertialTensor();
+		m_vAngularMomentum = computeCurrentInertialTensor().transformVector(m_vAngularVelocity);
+	}
+}
+boolean Rigidbody::isKinematic() const { return m_bIsKinematic; }
+
 Vec3 Rigidbody::getLinearVelocity() const { return m_vLinearVelocity; }
 void Rigidbody::setLinearVelocity(Vec3 linearVelocity) { this->m_vLinearVelocity = linearVelocity; }
 
 Vec3 Rigidbody::getAngularVelocity() const { return m_vAngularVelocity; }
-
 void Rigidbody::setAngularVelocity(Vec3 angularVelocity) {
 	this->m_vAngularVelocity = angularVelocity;
 
-	// Update the angular momentum, since we changed the angular velocity of the rigidbody:
-	this->m_vAngularMomentum = computeCurrentInertialTensor().transformVector(angularVelocity);
+	// If the rigidbody is not kinematic, update it's angular momentum, since we changed 
+	// it's angular velocity:
+	if(!m_bIsKinematic)
+		this->m_vAngularMomentum = computeCurrentInertialTensor().transformVector(angularVelocity);
 }
 
 Vec3 Rigidbody::getVelocityOfPoint(Vec3 position) const {
@@ -129,15 +154,14 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 		this->color = Vec3(1, 0, 0);
 		other->color = Vec3(1, 0, 0);
 
+		// If both objects are kinematic, ignore the collision:
+		if (m_bIsKinematic && other->m_bIsKinematic)
+			return true;
+
 		// Compute the impulse to update both rigidbodies:
 
 		Vec3 position = collision.collisionPointWorld;
 		Vec3 n = collision.normalWorld;
-		testNormalCollision = n * 100;
-		testCollisionCenter = position;
-
-		float Ma = m_fMass;
-		float Mb = other->m_fMass;
 
 		Vec3 xa = position - m_vPosition;
 		Vec3 xb = position - other->m_vPosition;
@@ -154,32 +178,68 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 		if (dot(vr, n) >= 0)
 			return true;
 
-		Mat4 invIa = m_mCurrentInvInertialTensor;
-		Mat4 invIb = other->m_mCurrentInvInertialTensor;
+		if (m_bIsKinematic) {
+			// Ma -> +infinity, so invA = 0
+			float Mb = other->m_fMass;
 
-		Vec3 A = cross(invIa.transformVector(cross(xa, n)), xa);
-		Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
+			Mat4 invIb = other->m_mCurrentInvInertialTensor;
+			Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
 
-		float num = -(1 + c) * dot(vr, n);
-		float den = (1 / Ma + 1 / Mb + dot(A + B, n));
+			// Result of the impulse:
+			float J = -(1+c) * dot(vr, n) / (1/Mb + dot(B, n));
 
-		// Result of the impulse:
-		float J = num / den;
+			// Update the linear velocity of the other rigidbody:
+			other->m_vLinearVelocity = vb - J * n / Mb;
 
-		// Update va and vb for both rigidbodies:
-		this->m_vLinearVelocity  = va + J * n / Ma;
-		other->m_vLinearVelocity = vb - J * n / Mb;
+			// Update the angular momentum and velocity of the other rigidbody:
+			other->m_vAngularMomentum = other->m_vAngularMomentum - cross(xb, J * n);
+			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
+		}
+		else if (other->m_bIsKinematic) {
+			// Mb -> +infinity, so invB = 0
+			float Ma = m_fMass;
 
-		// Update La and Lb for both rigidbodies:
-		Vec3 La = m_vAngularMomentum;
-		Vec3 Lb = other->m_vAngularMomentum;
+			Mat4 invIa = m_mCurrentInvInertialTensor;
+			Vec3 A = cross(invIa.transformVector(cross(xa, n)), xa);
 
-		this->m_vAngularMomentum  = La + cross(xa, J * n);
-		other->m_vAngularMomentum = Lb - cross(xb, J * n);
+			// Result of the impulse:
+			float J = -(1+c) * dot(vr, n) / (1/Ma + dot(A, n));
 
-		// Update: Shouldn't we also update the angular velocity of the rigidbodies ?
-		this->m_vAngularVelocity  = invIa.transformVector(this->m_vAngularMomentum);
-		other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
+			// Update the linear velocity of this rigidbody:
+			this->m_vLinearVelocity = va + J * n / Ma;
+
+			// Update the angular momentum and velocity of this rigidbody:
+			this->m_vAngularMomentum = m_vAngularMomentum + cross(xa, J * n);
+			this->m_vAngularVelocity = invIa.transformVector(this->m_vAngularMomentum);
+		}
+		else {
+			float Ma = m_fMass;
+			float Mb = other->m_fMass;
+
+			Mat4 invIa = m_mCurrentInvInertialTensor;
+			Mat4 invIb = other->m_mCurrentInvInertialTensor;
+
+			Vec3 A = cross(invIa.transformVector(cross(xa, n)), xa);
+			Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
+
+			// Result of the impulse:
+			float J = -(1+c) * dot(vr, n) / (1/Ma + 1/Mb + dot(A + B, n));
+
+			// Update va and vb for both rigidbodies:
+			this->m_vLinearVelocity = va + J * n / Ma;
+			other->m_vLinearVelocity = vb - J * n / Mb;
+
+			// Update La and Lb for both rigidbodies:
+			Vec3 La = m_vAngularMomentum;
+			Vec3 Lb = other->m_vAngularMomentum;
+
+			this->m_vAngularMomentum = La + cross(xa, J * n);
+			other->m_vAngularMomentum = Lb - cross(xb, J * n);
+
+			// Update the angular velocity of both rigidbodies:
+			this->m_vAngularVelocity = invIa.transformVector(this->m_vAngularMomentum);
+			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
+		}
 	}
 	else {
 		this->color = Vec3(0.4);
@@ -216,13 +276,18 @@ void Rigidbody::updateInertialTensors()
 
 void Rigidbody::updateCurrentInertialTensor()
 {
-	// Update the current inertial tensor of the rigidbody, depending on it's orientation:
-	this->m_mCurrentInvInertialTensor = computeCurrentInvInertialTensor();
+	// If the rigidbody is kinematic, the inverse of it's inertial tensor is null, and thus 
+	// it's angular momentum is also null, so we can ignore this:
+	if (!m_bIsKinematic) {
+		// Update the current inertial tensor of the rigidbody, depending on it's orientation:
+		this->m_mCurrentInvInertialTensor = computeCurrentInvInertialTensor();
 
-	// Update the angular momentum, since we changed the inertial tensor of the rigidbody:
-	this->m_vAngularMomentum = computeCurrentInertialTensor().transformVector(m_vAngularVelocity);
+		// Update the angular momentum, since we changed the inertial tensor of the rigidbody:
+		this->m_vAngularMomentum = computeCurrentInertialTensor().transformVector(m_vAngularVelocity);
+	}
 }
 
+// This should be called only if the rigidbody is not kinematic:
 Mat4 Rigidbody::computeCurrentInertialTensor() const {
 	Mat4 invRotMat = m_mRotMat;
 	invRotMat.transpose();
@@ -231,6 +296,7 @@ Mat4 Rigidbody::computeCurrentInertialTensor() const {
 	return invRotMat * m_mInertialTensor0 * m_mRotMat;
 }
 
+// This should be called only if the rigidbody is not kinematic:
 Mat4 Rigidbody::computeCurrentInvInertialTensor() const {
 	Mat4 invRotMat = m_mRotMat;
 	invRotMat.transpose();
@@ -256,6 +322,7 @@ void Rigidbody::updateTransformMatrices()
 	this->m_mTransformMatrix = m_mTransformMatrix * tmp;
 }
 
+// This should be called only if the rigidbody is not kinematic:
 Vec3 Rigidbody::computeTorque() {
 	Vec3 sum;
 

@@ -28,6 +28,9 @@ public:
 	Vec3 getScale() const;
 	void setScale(Vec3 scale);
 
+	void setKinematic(boolean isKinematic);
+	boolean isKinematic() const;
+
 	Vec3 getLinearVelocity() const;
 	void setLinearVelocity(Vec3 linearVelocity);
 
@@ -57,6 +60,9 @@ private:
 	Quat m_qRotation;
 	Vec3 m_vScale;
 
+	// If the rigidbody is kinematic, it behaves like if it had an infinite mass:
+	boolean m_bIsKinematic;
+
 	Vec3 m_vLinearVelocity;
 	Vec3 m_vAngularVelocity;
 
@@ -73,9 +79,5 @@ private:
 
 	Vec3 m_vSumForces;						// Sum of the forces applied to this Rigidbody
 	vector<pair<Vec3, Vec3>> m_vTorques;	// All the torques (position, force) applied to this Rigidbody
-
-	// TODO: Delete this !
-	Vec3 testCollisionCenter;
-	Vec3 testNormalCollision;
 };
 #endif
