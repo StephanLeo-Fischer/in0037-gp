@@ -53,12 +53,11 @@ private:
 
 	vector<Rigidbody> m_vRigidbodies;
 
-	// For debug only:
-	boolean stopSimulation = false;
-	Vec3 collisionPosition;
+	float m_fCollisionFactor;
 
 	void setupDemo1();
 	void setupDemo2();
+	void setupComplex();
 	void manageCollisions();
 };
 #endif

@@ -15,6 +15,9 @@ public:
 	void clearForces();
 
 	// Add some getters and setters:
+	float getMass() const;
+	void setMass(float mass);
+
 	Vec3 getPosition() const;
 	void setPosition(Vec3 position);
 
@@ -34,25 +37,21 @@ public:
 	// Compute the velocity of the given position in global space, if it was part of the rigidbody:
 	Vec3 getVelocityOfPoint(Vec3 position) const;
 
-	Mat4 getTransformMatrix() const;
+	boolean manageCollision(Rigidbody* other, float c);
 
 	// Color of the rigidbody (used for drawing)
 	Vec3 color;
 
 private:
-	void updateInertialTensors();
+	void updateTransformMatrices();		// We need to call this when we update the position, rotation or scale of the rigidbody
+	void updateInertialTensors();		// We need to call this when we update the mass or the scale of the rigidbody
+	void updateCurrentInertialTensor();	// We need to call this when we changed the rotation of the rigidbody
+	
+	Mat4 computeCurrentInertialTensor() const;
+	Mat4 computeCurrentInvInertialTensor() const;
 	Vec3 computeTorque();
 
 	float m_fMass;
-
-	// Inertial tensor of the rigidbody, as well as it's inverse:
-	Mat4 m_mInertialTensor;
-	Mat4 m_mInvInertialTensor;
-
-	// Translation, rotation and scale matrices (used for drawing):
-	Mat4 m_mTranslatMat;
-	Mat4 m_mRotMat;
-	Mat4 m_mScaleMat;
 
 	Vec3 m_vPosition;
 	Quat m_qRotation;
@@ -61,9 +60,22 @@ private:
 	Vec3 m_vLinearVelocity;
 	Vec3 m_vAngularVelocity;
 
+	// Rotation and transformation matrices:
+	Mat4 m_mRotMat;
+	Mat4 m_mTransformMatrix;	// scaleMat * rotMat * translatMat
+
+	// Initial inertial tensor of the rigidbody, as well as it's inverse:
+	Mat4 m_mInertialTensor0;
+	Mat4 m_mInvInertialTensor0;
+	Mat4 m_mCurrentInvInertialTensor;	// R*inv(I)*inv(R)
+
+	Vec3 m_vAngularMomentum;
+
 	Vec3 m_vSumForces;						// Sum of the forces applied to this Rigidbody
 	vector<pair<Vec3, Vec3>> m_vTorques;	// All the torques (position, force) applied to this Rigidbody
 
-	Vec3 m_vAngularMomentum;
+	// TODO: Delete this !
+	Vec3 testCollisionCenter;
+	Vec3 testNormalCollision;
 };
 #endif

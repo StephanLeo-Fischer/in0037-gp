@@ -1,10 +1,9 @@
 #include "RigidBodySystemSimulator.h"
-#include "collisionDetect.h"
 
 RigidBodySystemSimulator::RigidBodySystemSimulator()
 {
 	// Data Attributes
-	// ...
+	m_fCollisionFactor = 1;
 
 	// UI Attributes
 	m_externalForce = 0.0;
@@ -25,8 +24,6 @@ const char* RigidBodySystemSimulator::getTestCasesStr()
 // Called when we reset the scene, or change the test case:
 void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 {
-	stopSimulation = false;
-
 	this->DUC = DUC;
 	switch (m_iTestCase)
 	{
@@ -37,9 +34,8 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		break;
 
 	case DEMO3_COLLISION:
-		break;
-
 	case DEMO4_COMPLEX:
+		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_FLOAT, &m_fCollisionFactor, "min=0 max=1 step=0.01");
 		break;
 
 	default:
@@ -61,14 +57,7 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
 	for (auto& r : m_vRigidbodies)
 		r.draw(DUC);
 
-	
-	if (stopSimulation) {
-		Vec3 color = Vec3(0, 0, 1);
-		DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
-		DUC->drawSphere(collisionPosition, Vec3(0.05));
-	}
-
-	Sleep(5);
+	Sleep(1);
 }
 
 // Called when we reset the scene, or change the test case:
@@ -106,7 +95,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 
 	case DEMO4_COMPLEX:
 		cout << "Switch to Demo4: Complex !\n";
-		setupDemo2();
+		setupComplex();
 		break;
 
 	default:
@@ -140,9 +129,6 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
 
 void RigidBodySystemSimulator::simulateTimestep(float timestep)
 {
-	if (stopSimulation)
-		return;
-
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{
@@ -241,36 +227,42 @@ void RigidBodySystemSimulator::setupDemo2()
 {
 	m_vRigidbodies.clear();
 
-	Rigidbody r1 = Rigidbody(1, Vec3(2, 0, 0), Vec3(45, 59, 10), Vec3(1, 0.6, 0.4));
-	r1.applyForce(Vec3(-1, 0, 0));
-	r1.setAngularVelocity(Vec3(0.1, 1, 0.1));
+	Rigidbody ground = Rigidbody(1000, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	
+	Rigidbody body = Rigidbody(1, Vec3(0, 0, 0), Vec3(0, 0, 20), Vec3(2, 0.1, 0.01));
+	body.applyForce(Vec3(0, -5, 0));
 
-	Rigidbody r2 = Rigidbody(1, Vec3(-2, 0, 0), Vec3(10, 39, 28), Vec3(0.4, 0.8, 1));
-	r2.applyForce(Vec3(0.5, 0, 0));
-	r2.setAngularVelocity(Vec3(-0.1, -2, -0.2));
+	m_vRigidbodies.push_back(ground);
+	m_vRigidbodies.push_back(body);
+}
 
-	m_vRigidbodies.push_back(r1);
-	m_vRigidbodies.push_back(r2);
+void RigidBodySystemSimulator::setupComplex()
+{
+	m_vRigidbodies.clear();
+
+	Rigidbody ground = Rigidbody(1000, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+
+	Rigidbody box1 = Rigidbody(1, Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0.6));
+	Rigidbody box2 = Rigidbody(1, Vec3(0, 1, 0), Vec3(0, 0, 0), Vec3(0.4));
+	Rigidbody box3 = Rigidbody(1, Vec3(0, 2, 0), Vec3(0, 0, 0), Vec3(0.2));
+
+	box1.applyForce(Vec3(0, -2, 0));
+	box2.applyForce(Vec3(0, -2, 0));
+	box3.applyForce(Vec3(0, -2, 0));
+
+	m_vRigidbodies.push_back(ground);
+	m_vRigidbodies.push_back(box1);
+	m_vRigidbodies.push_back(box2);
+	m_vRigidbodies.push_back(box3);
 }
 
 void RigidBodySystemSimulator::manageCollisions()
 {
 	for (int i = 0; i < m_vRigidbodies.size(); i++) {
 		for (int j = i+1; j < m_vRigidbodies.size(); j++) {
+
 			// Manage collision between rigidbodies i and j:
-
-			Mat4 transform1 = m_vRigidbodies[i].getTransformMatrix();
-			Mat4 transform2 = m_vRigidbodies[j].getTransformMatrix();
-
-			CollisionInfo collision = checkCollisionSAT(transform1, transform2);
-
-			if (collision.isValid) {
-				m_vRigidbodies[i].color = Vec3(1, 0, 0);
-				m_vRigidbodies[j].color = Vec3(1, 0, 0);
-
-				collisionPosition = collision.collisionPointWorld;
-				stopSimulation = true;
-			}
+			m_vRigidbodies[i].manageCollision(&m_vRigidbodies[j], m_fCollisionFactor);
 		}
 	}
 }
