@@ -13,6 +13,8 @@
 #define DEMO3_COLLISION 2
 #define DEMO4_COMPLEX 3
 
+#define GRAVITY_FACTOR 6
+
 
 class RigidBodySystemSimulator:public Simulator {
 public:
@@ -30,6 +32,12 @@ public:
 	void onClick(int x, int y);
 	void onMouse(int x, int y);
 
+	// Other functions for the mouse:
+	void mousePressed(int x, int y);	// Called the first frame where the mouse is pressed
+	void mouseReleased(int x, int y);	// Called the first frame where the mouse is released
+	void mouseDragged(int x, int y);	// Called when the mouse is moved while pressed
+	void mouseMoved(int x, int y);		// Called when the mouse is moved while released
+
 	// ExtraFunctions
 	int getNumberOfRigidBodies();
 	Vec3 getPositionOfRigidBody(int i);
@@ -42,14 +50,11 @@ public:
 
 private:
 	// Attributes
-	// add your RigidBodySystem data members, for e.g.,
-	// RigidBodySystem * m_pRigidBodySystem; 
 	Vec3 m_externalForce;
 
 	// UI Attributes
-	Point2D m_mouse;
-	Point2D m_trackmouse;
-	Point2D m_oldtrackmouse;
+	Point2D m_prevmouse;	// Previous mouse position
+	boolean m_bMousePressed;
 
 	vector<Rigidbody> m_vRigidbodies;
 

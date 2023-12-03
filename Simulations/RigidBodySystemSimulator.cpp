@@ -3,13 +3,12 @@
 RigidBodySystemSimulator::RigidBodySystemSimulator()
 {
 	// Data Attributes
-	m_fCollisionFactor = 1;
+	m_fCollisionFactor = 0.6;
 
 	// UI Attributes
 	m_externalForce = 0.0;
-	m_mouse = { 0, 0 };
-	m_trackmouse = { 0, 0 };
-	m_oldtrackmouse = { 0, 0 };
+	m_prevmouse = { 0, 0 };
+	m_bMousePressed = false;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr()
@@ -46,9 +45,8 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 // Called once, at the beginning of the program:
 void RigidBodySystemSimulator::reset()
 {
-	m_mouse.x = m_mouse.y = 0;
-	m_trackmouse.x = m_trackmouse.y = 0;
-	m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
+	m_prevmouse.x = m_prevmouse.y = 0;
+	m_bMousePressed = false;
 }
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
@@ -105,27 +103,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 }
 
 // Called each time the mouse is moved while pressed:
-void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
-{
-	// Apply the mouse deltas to g_vfMovableObjectPos (move along cameras view plane)
-	Point2D mouseDiff;
-	mouseDiff.x = m_trackmouse.x - m_oldtrackmouse.x;
-	mouseDiff.y = m_trackmouse.y - m_oldtrackmouse.y;
-
-	if (mouseDiff.x != 0 || mouseDiff.y != 0)
-	{
-		Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
-		worldViewInv = worldViewInv.inverse();
-		Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
-		Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
-
-		// find a proper scale!
-		float inputScale = 1;
-		inputWorld = inputWorld * inputScale;
-
-		//addExternalForce(inputWorld);
-	}
-}
+void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed){}
 
 void RigidBodySystemSimulator::simulateTimestep(float timestep)
 {
@@ -156,17 +134,77 @@ void RigidBodySystemSimulator::simulateTimestep(float timestep)
 // and when the mouse is moved while clicked:
 void RigidBodySystemSimulator::onClick(int x, int y)
 {
-	m_trackmouse.x = x;
-	m_trackmouse.y = y;
+	// The first frame where we have a mouse pressed, we call mousePressed()
+	if (!m_bMousePressed) {
+		m_bMousePressed = true;
+		mousePressed(x, y);
+	}
+
+	// Then, if the mouse was pressed in the previous frame, and is still pressed, 
+	// we call mouseDragged()
+	else
+		mouseDragged(x, y);
+
+	m_prevmouse.x = x;
+	m_prevmouse.y = y;
 }
 
-// This function is called when the mouse moves, but not clicked:
+// This function is called when the mouse moves or is released, but not clicked:
 void RigidBodySystemSimulator::onMouse(int x, int y)
 {
-	m_oldtrackmouse.x = x;
-	m_oldtrackmouse.y = y;
-	m_trackmouse.x = x;
-	m_trackmouse.y = y;
+	// The first frame where we have a mouse release, we call mouseReleased()
+	if (m_bMousePressed) {
+		m_bMousePressed = false;
+		mouseReleased(x, y);
+	}
+
+	// Then, if the mouse was released in the previous frame, and is still released, 
+	// we call mouseMoved()
+	else
+		mouseMoved(x, y);
+
+	m_prevmouse.x = x;
+	m_prevmouse.y = y;
+}
+
+void RigidBodySystemSimulator::mousePressed(int x, int y)
+{
+	// First frame after a mouse press
+}
+
+void RigidBodySystemSimulator::mouseReleased(int x, int y)
+{
+	
+	// First frame after a mouse release	
+	if (m_iTestCase == DEMO4_COMPLEX) {
+
+		// Fire a cube in the scene, from the camera:
+		Mat4 worldView = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
+
+		// Position of the camera in world :
+		Vec3 inputWorld = worldView.inverse().transformVector(Vec3(0, 0, 0));
+
+		// Create a box at the position of the camera:
+		Rigidbody bulletBox = Rigidbody(1, inputWorld, Quat(worldView), Vec3(0.1));
+		bulletBox.color = Vec3(1, 0, 0);
+
+		bulletBox.applyForce(Vec3(0, -GRAVITY_FACTOR, 0));
+
+		// Throw the box to the center of the scene:
+		bulletBox.setLinearVelocity(-20 * inputWorld / norm(inputWorld));
+
+		m_vRigidbodies.push_back(bulletBox);
+	}
+}
+
+void RigidBodySystemSimulator::mouseDragged(int x, int y)
+{
+	// Mouse moved while pressed
+}
+
+void RigidBodySystemSimulator::mouseMoved(int x, int y)
+{
+	// Mouse moved while released
 }
 
 int RigidBodySystemSimulator::getNumberOfRigidBodies()
@@ -227,34 +265,44 @@ void RigidBodySystemSimulator::setupDemo2()
 {
 	m_vRigidbodies.clear();
 
-	Rigidbody ground = Rigidbody(1000, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	Rigidbody ground = Rigidbody(1, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	ground.color = Vec3(0.1);
+	ground.setKinematic(true);
 	
-	Rigidbody body = Rigidbody(1, Vec3(0, 0, 0), Vec3(0, 0, 20), Vec3(2, 0.1, 0.01));
-	body.applyForce(Vec3(0, -5, 0));
+	Rigidbody plank = Rigidbody(1, Vec3(0, 0, 0), Vec3(0, 0, 20), Vec3(2, 0.1, 0.01));
+	plank.color = Vec3(0.6, 0.27, 0.03);
+	plank.applyForce(Vec3(0, -GRAVITY_FACTOR, 0));
 
 	m_vRigidbodies.push_back(ground);
-	m_vRigidbodies.push_back(body);
+	m_vRigidbodies.push_back(plank);
 }
 
 void RigidBodySystemSimulator::setupComplex()
 {
 	m_vRigidbodies.clear();
 
-	Rigidbody ground = Rigidbody(1000, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	Rigidbody ground = Rigidbody(1, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	ground.color = Vec3(0.1);
 	ground.setKinematic(true);
 
-	Rigidbody box1 = Rigidbody(1, Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0.6));
-	Rigidbody box2 = Rigidbody(1, Vec3(0, 1, 0), Vec3(0, 0, 0), Vec3(0.4));
-	Rigidbody box3 = Rigidbody(1, Vec3(0, 2, 0), Vec3(0, 0, 0), Vec3(0.2));
+	Rigidbody box1 = Rigidbody(1, Vec3(0, 0.0, 0), Vec3(0, 0, 0), Vec3(1.0, 0.1, 1.0));
+	Rigidbody box2 = Rigidbody(1, Vec3(0, 0.4, 0), Vec3(0, 0, 0), Vec3(0.8, 0.1, 0.8));
+	Rigidbody box3 = Rigidbody(1, Vec3(0, 0.6, 0), Vec3(0, 0, 0), Vec3(0.6, 0.1, 0.6));
+	Rigidbody box4 = Rigidbody(1, Vec3(0, 0.8, 0), Vec3(0, 0, 0), Vec3(0.4, 0.1, 0.4));
+	Rigidbody box5 = Rigidbody(1, Vec3(0, 1.0, 0), Vec3(0, 0, 0), Vec3(0.2, 0.1, 0.2));
 
-	box1.applyForce(Vec3(0, -2, 0));
-	box2.applyForce(Vec3(0, -2, 0));
-	box3.applyForce(Vec3(0, -2, 0));
+	box1.applyForce(Vec3(0, -GRAVITY_FACTOR, 0));
+	box2.applyForce(Vec3(0, -GRAVITY_FACTOR, 0));
+	box3.applyForce(Vec3(0, -GRAVITY_FACTOR, 0));
+	box4.applyForce(Vec3(0, -GRAVITY_FACTOR, 0));
+	box5.applyForce(Vec3(0, -GRAVITY_FACTOR, 0));
 
 	m_vRigidbodies.push_back(ground);
 	m_vRigidbodies.push_back(box1);
 	m_vRigidbodies.push_back(box2);
 	m_vRigidbodies.push_back(box3);
+	m_vRigidbodies.push_back(box4);
+	m_vRigidbodies.push_back(box5);
 }
 
 void RigidBodySystemSimulator::manageCollisions()

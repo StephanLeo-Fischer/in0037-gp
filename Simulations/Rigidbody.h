@@ -4,7 +4,11 @@
 
 class Rigidbody {
 public:
+	// Create a rigidbody with an orientation using Euler angles (in degrees):
 	Rigidbody(float mass, Vec3 position, Vec3 rotation, Vec3 scale);
+
+	// Create a rigidbody with an orientation defined with a quaternion:
+	Rigidbody(float mass, Vec3 position, Quat rotation, Vec3 scale);
 
 	void draw(DrawingUtilitiesClass * DUC) const;
 

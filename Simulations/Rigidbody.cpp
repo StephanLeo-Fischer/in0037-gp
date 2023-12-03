@@ -3,16 +3,19 @@
 
 #define RADIANS(deg) (deg * M_PI / 180)
 
-Rigidbody::Rigidbody(float mass, Vec3 position, Vec3 rotation, Vec3 scale) :
+Rigidbody::Rigidbody(float mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
+	Rigidbody(mass, position, Quat(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)), scale) {}
+
+Rigidbody::Rigidbody(float mass, Vec3 position, Quat rotation, Vec3 scale) :
 	m_fMass(mass),
 	m_vPosition(position),
-	m_qRotation(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)),
+	m_qRotation(rotation),
 	m_vScale(scale.x, scale.y, scale.z),
 
 	m_bIsKinematic(false),
 
-	m_vLinearVelocity(0.0), 
-	m_vAngularVelocity(0.0), 
+	m_vLinearVelocity(0.0),
+	m_vAngularVelocity(0.0),
 	color(0.2) {
 
 	updateTransformMatrices();
@@ -150,10 +153,6 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 	CollisionInfo collision = checkCollisionSAT(transformA, transformB);
 
 	if (collision.isValid) {
-		// Change the color of the rigidbodies:
-		this->color = Vec3(1, 0, 0);
-		other->color = Vec3(1, 0, 0);
-
 		// If both objects are kinematic, ignore the collision:
 		if (m_bIsKinematic && other->m_bIsKinematic)
 			return true;
@@ -194,6 +193,10 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			// Update the angular momentum and velocity of the other rigidbody:
 			other->m_vAngularMomentum = other->m_vAngularMomentum - cross(xb, J * n);
 			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
+
+			// Little improvement: update the position of the rigidbodies directly, to manage the
+			// situation when rigidbodies are just colliding with vrel = 0:
+			other->m_vPosition -= collision.depth * n;
 		}
 		else if (other->m_bIsKinematic) {
 			// Mb -> +infinity, so invB = 0
@@ -211,6 +214,10 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			// Update the angular momentum and velocity of this rigidbody:
 			this->m_vAngularMomentum = m_vAngularMomentum + cross(xa, J * n);
 			this->m_vAngularVelocity = invIa.transformVector(this->m_vAngularMomentum);
+
+			// Little improvement: update the position of the rigidbodies directly, to manage the
+			// situation when rigidbodies are just colliding with vrel = 0:
+			this->m_vPosition += collision.depth * n;
 		}
 		else {
 			float Ma = m_fMass;
@@ -239,11 +246,12 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			// Update the angular velocity of both rigidbodies:
 			this->m_vAngularVelocity = invIa.transformVector(this->m_vAngularMomentum);
 			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
+
+			// Little improvement: update the position of the rigidbodies directly, to manage the
+			// situation when rigidbodies are just colliding with vrel = 0:
+			this->m_vPosition += Mb * collision.depth * n / (Ma + Mb);
+			other->m_vPosition -= Ma * collision.depth * n / (Ma + Mb);
 		}
-	}
-	else {
-		this->color = Vec3(0.4);
-		other->color = Vec3(0.4);
 	}
 
 	// Return if there was a collision between the two rigidbodies
