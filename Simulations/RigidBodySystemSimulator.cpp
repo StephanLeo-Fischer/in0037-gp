@@ -171,13 +171,14 @@ void RigidBodySystemSimulator::initTable1()
 	Vec3 size = Vec3(1, 0.6, 0.5);
 
 	addRigidBody(pos, size, 2);
+	Rigidbox& rb = m_vRigidboxes.front();
+	rb.m_mRotation.initRotationZ(90);
+	rb.m_qOrientation = Quat(rb.m_mRotation);
+	rb.addForce(Vec3(1, 1, 0), Vec3(0.3, 0.5, 0.25));
 }
 
 void RigidBodySystemSimulator::timestepEuler(float timeStep) {
 	// single time step impl here. TODO in ne andere func
-
-	Vec3 force = Vec3(1, 1, 0);
-	Vec3 forcePos = Vec3(0.3, 0.5, 0.25);
 
 	for (auto& rb : m_vRigidboxes) 
 	{

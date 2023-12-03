@@ -92,6 +92,12 @@ private:
 		}
 
 		std::string toString();
+
+		void addForce(Vec3 force, Vec3 forcePos) 
+		{
+			m_vForce += force;
+			m_vTorque += cross(forcePos, force);
+		}
 	};
 
 	vector<Rigidbox> m_vRigidboxes;
