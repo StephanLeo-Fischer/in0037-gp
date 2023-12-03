@@ -32,6 +32,18 @@ void RigidBodySystemSimulator::reset()
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
+	switch (m_iTestCase) {
+	case 0:break;
+	default:
+		DUC->setUpLighting(Vec3(0, 0, 0), 0.4 * Vec3(1, 1, 1), 2000.0, Vec3(0.5, 0.5, 0.5));
+		Mat4 camera = DUC->g_camera.GetWorldMatrix();
+
+		for (Rigidbody& r : rigidbodies) {
+			DUC->drawRigidBody(r.toWorldMatrix() * camera);
+		}
+		break;
+	}
+	
 	/*
 	// Apply the mouse deltas to g_vfMovableObjectPos (move along cameras view plane)
 	Point2D mouseDiff;
@@ -68,6 +80,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 		break;
 	case 1:
 		cout << "Demo 2!\n";
+		initDemo1();
 		break;
 	case 2:
 		cout << "Demo 3!\n";
@@ -87,6 +100,13 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
 
 void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 {
+	switch (m_iTestCase) {
+	case 1:
+		eulerStep(0.01);
+		break;
+	default:
+		break;
+	}
 }
 
 void RigidBodySystemSimulator::onClick(int x, int y)

@@ -56,7 +56,11 @@ void Rigidbody::clearForces()
 
 Mat4 Rigidbody::toWorldMatrix()
 {
-	return Mat4();
+	Mat4 translatMat, scaleMat;
+	translatMat.initTranslation(position.x, position.y, position.z);
+	scaleMat.initScaling(size.x, size.y, size.z);
+
+	return scaleMat * orientation.getRotMat() * translatMat;
 }
 
 Vec3 Rigidbody::worldPositionOfPoint(Vec3 point)
