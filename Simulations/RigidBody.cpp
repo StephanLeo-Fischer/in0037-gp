@@ -1,3 +1,5 @@
+#pragma once
+
 #include "RigidBody.h"
 
 bool RigidBody::collide(RigidBody& body0, RigidBody& body1)

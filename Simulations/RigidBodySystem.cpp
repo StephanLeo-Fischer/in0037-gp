@@ -1,3 +1,5 @@
+#pragma once
+
 #include "RigidBodySystem.h"
 
 RigidBodySystem::RigidBodySystem() :

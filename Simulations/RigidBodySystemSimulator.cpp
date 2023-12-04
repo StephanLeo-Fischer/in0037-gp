@@ -1,3 +1,5 @@
+#pragma once
+
 #include "RigidBodySystemSimulator.h"
 
 #define demo1 "Demo-1: A simple one-step test"

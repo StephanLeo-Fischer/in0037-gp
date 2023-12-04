@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef RIGIDBODYSYSTEMSIMULATOR_h
 #define RIGIDBODYSYSTEMSIMULATOR_h
 #include "Simulator.h"

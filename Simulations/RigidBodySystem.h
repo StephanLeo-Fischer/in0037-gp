@@ -1,3 +1,5 @@
+#pragma once
+
 #include "RigidBody.h"
 #include <vector>
 #include <AntTweakBar.h>

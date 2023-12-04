@@ -6,6 +6,8 @@
 #include "util/matrixbase.h"
 #include "util/quaternion.h"
 
+using namespace DirectX;
+
 class RigidBody
 {
 public:
