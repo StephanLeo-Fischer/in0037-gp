@@ -1,5 +1,6 @@
 #pragma once
 #include "util/quaternion.h"
+#include "collisionDetect.h"
 
 using namespace GamePhysics;
 
@@ -30,6 +31,8 @@ public:
 
 	void addForce(Vec3 loc, Vec3 force);
 	void clearForces();
+
+	void handleCollision(float impulse, Vec3 point, Vec3 normal);
 
 	Mat4 toWorldMatrix();
 	Vec3 worldPositionOfPoint(Vec3 point);

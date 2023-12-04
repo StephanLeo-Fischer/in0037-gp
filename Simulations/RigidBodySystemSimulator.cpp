@@ -17,7 +17,9 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	{
 	case 0:break;
 	case 1:break;
-	case 2:break;
+	case 2:
+		TwAddVarRW(DUC->g_pTweakBar, "Coeff. o. Rest.", TW_TYPE_FLOAT, &cor, "min=0.1 step=0.1 max=1");
+		break;
 	case 3:break;
 	default:break;
 	}
@@ -84,6 +86,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 		break;
 	case 2:
 		cout << "Demo 3!\n";
+		initDemo3();
 		break;
 	case 3:
 		cout << "Demo 4!\n";
@@ -103,6 +106,10 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 	switch (m_iTestCase) {
 	case 1:
 		eulerStep(0.01);
+		break;
+	case 2:
+		eulerStep(timeStep);
+		collisionHandling();
 		break;
 	default:
 		break;
@@ -167,6 +174,15 @@ void RigidBodySystemSimulator::initDemo1()
 	applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
 }
 
+void RigidBodySystemSimulator::initDemo3()
+{
+	addRigidBody(Vec3(), Vec3(1), 1, Vec3());
+	addRigidBody(Vec3(0, 3, 0), Vec3(1), 1, Vec3(0, 45, 45));
+
+	rigidbodies.at(0).linearVelocity = Vec3(0, 0.5, 0);
+	rigidbodies.at(1).linearVelocity = Vec3(0, -0.5, 0);
+}
+
 void RigidBodySystemSimulator::printResults()
 {
 	Rigidbody& r = rigidbodies.at(0);
@@ -182,8 +198,44 @@ void RigidBodySystemSimulator::eulerStep(float timeStep)
 		r.linearEulerStep(timeStep);
 		r.angularEulerStep(timeStep);
 		r.clearForces();
-	}
+	}	
+}
 
+void RigidBodySystemSimulator::collisionHandling()
+{
+	for (int i = 0; i < rigidbodies.size(); i++) {
+
+		Rigidbody& a = rigidbodies.at(i);
+
+		for (int j = i + 1; j < rigidbodies.size(); j++) {
+
+			Rigidbody& b = rigidbodies.at(j);
+			auto info = checkCollisionSAT(a.toWorldMatrix(), b.toWorldMatrix());
+			if (!info.isValid) return;
+
+			Vec3 vrel = a.worldVelocityOfPoint(info.collisionPointWorld - a.position) - b.worldVelocityOfPoint(info.collisionPointWorld - b.position);
+			if (dot(vrel, info.normalWorld) >= 0) return;
+
+			float impulse = calculateImpulse(vrel, a, b, info.collisionPointWorld, info.normalWorld);
+			a.handleCollision(impulse, info.collisionPointWorld, info.normalWorld);
+			b.handleCollision(-impulse, info.collisionPointWorld, info.normalWorld);
+		}
+	}	
+}
+
+float RigidBodySystemSimulator::calculateImpulse(Vec3 vrel, Rigidbody a, Rigidbody b, Vec3 collisionPoint, Vec3 normal)
+{
+	auto top = dot(-(1.0 + cor) * vrel, normal);
+	auto bottomMasses = (1.0 / a.mass) + (1.0 / b.mass);
+
+	Vec3 aCollisionPoint = collisionPoint - a.position;
+	auto aInertiaThingy = cross(a.calculateInertia().transformVector(cross(aCollisionPoint, normal)), aCollisionPoint);
+	
+	Vec3 bCollisionPoint = collisionPoint - b.position;
+	auto bInertiaThingy = cross(b.calculateInertia().transformVector(cross(bCollisionPoint, normal)), bCollisionPoint);
+	
+
+	return top / (bottomMasses + dot(aInertiaThingy + bInertiaThingy, normal));
 }
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass, Vec3 rotation)

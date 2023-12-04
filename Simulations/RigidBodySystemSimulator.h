@@ -37,6 +37,7 @@ private:
 	// Rigidbody Attributes
 	Vec3 m_externalForce;
 	vector<Rigidbody> rigidbodies;
+	float cor = 0.5;
 
 	// UI Attributes
 	Point2D m_mouse;
@@ -45,9 +46,12 @@ private:
 
 	// Simulation Functions
 	void initDemo1();
+	void initDemo3();
 	void printResults();
 
 	void eulerStep(float timeStep);
+	void collisionHandling();
+	float calculateImpulse(Vec3 vrel, Rigidbody a, Rigidbody b, Vec3 collisionPoint, Vec3 normal);
 
 	//Additional Functions
 	void addRigidBody(Vec3 position, Vec3 size, int mass, Vec3 rotation);

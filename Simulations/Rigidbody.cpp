@@ -17,6 +17,7 @@ Rigidbody::Rigidbody(Vec3 position, Vec3 size, float mass, Vec3 rotation)
 
 	Vec3 i = ((float)mass / 12.0) * Vec3(size.y * size.y + size.z * size.z, size.x * size.x + size.z * size.z, size.x * size.x + size.y * size.y);
 	inertiaTensor = Mat4(i.x, 0, 0, 0, 0, i.y, 0, 0, 0, 0, i.z, 0, 0, 0, 0, 1);
+	inertiaTensor.inverse();
 }
 
 void Rigidbody::linearEulerStep(float timeStep)
@@ -30,7 +31,7 @@ void Rigidbody::angularEulerStep(float timeStep)
 	orientation += (timeStep / 2.0) * Quat(angularVelocity.x, angularVelocity.y, angularVelocity.z, 0) * orientation;
 	orientation.unit();
 
-	momentum += timeStep * torque;
+	momentum += torque * timeStep;
 	angularVelocity = calculateInertia().transformVector(momentum);
 }
 
@@ -52,6 +53,12 @@ void Rigidbody::clearForces()
 {
 	force = Vec3();
 	torque = Vec3();
+}
+
+void Rigidbody::handleCollision(float impulse, Vec3 point, Vec3 normal)
+{
+	linearVelocity += (impulse * normal) / mass;
+	momentum += cross(point - position, impulse * normal);
 }
 
 Mat4 Rigidbody::toWorldMatrix()
