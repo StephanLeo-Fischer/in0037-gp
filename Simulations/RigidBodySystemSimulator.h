@@ -49,20 +49,23 @@ public:
 	void setVelocityOf(int i, Vec3 velocity);
 
 private:
-	// Attributes
-	Vec3 m_externalForce;
-
 	// UI Attributes
-	Point2D m_prevmouse;	// Previous mouse position
+	Point2D m_prevmouse;		// Previous mouse position
 	boolean m_bMousePressed;
+	boolean m_bKeyF_Pressed;	// If the key F is pressed or not
 
 	vector<Rigidbody> m_vRigidbodies;
 
-	float m_fCollisionFactor;
+	// Set of parameters used for the simulation, that can be changed in the UI:
+	SimulationParameters m_SimulationParameters;
 
 	void setupDemo1();
 	void setupDemo2();
 	void setupComplex();
+	void setupTower();
+	void setupDominos();
 	void manageCollisions();
+	void manageKeyEvents();
+	void fireRigidbody();
 };
 #endif

@@ -3,10 +3,11 @@
 
 #define RADIANS(deg) (deg * M_PI / 180)
 
-Rigidbody::Rigidbody(float mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
-	Rigidbody(mass, position, Quat(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)), scale) {}
+Rigidbody::Rigidbody(SimulationParameters * params, float mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
+	Rigidbody(params, mass, position, Quat(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)), scale) {}
 
-Rigidbody::Rigidbody(float mass, Vec3 position, Quat rotation, Vec3 scale) :
+Rigidbody::Rigidbody(SimulationParameters* params, float mass, Vec3 position, Quat rotation, Vec3 scale) :
+	m_pParams(params),
 	m_fMass(mass),
 	m_vPosition(position),
 	m_qRotation(rotation),
@@ -15,7 +16,9 @@ Rigidbody::Rigidbody(float mass, Vec3 position, Quat rotation, Vec3 scale) :
 	m_bIsKinematic(false),
 
 	m_vLinearVelocity(0.0),
+	m_vPrevLinearVelocity(0.0),
 	m_vAngularVelocity(0.0),
+	m_vPrevAngularVelocity(0.0),
 	color(0.2) {
 
 	updateTransformMatrices();
@@ -39,6 +42,10 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC) const
 
 void Rigidbody::timestepEuler(float timestep)
 {
+	// This is used to perform micro collisions:
+	m_vPrevLinearVelocity = m_vLinearVelocity;
+	m_vPrevAngularVelocity = m_vAngularVelocity;
+
 	Quat w = Quat(m_vAngularVelocity.x, m_vAngularVelocity.y, m_vAngularVelocity.z, 0);
 	
 	m_vPosition += timestep * m_vLinearVelocity;
@@ -51,6 +58,10 @@ void Rigidbody::timestepEuler(float timestep)
 		// Update the linear velocity, and angular momentum:
 		m_vLinearVelocity += timestep * m_vSumForces / m_fMass;
 		m_vAngularMomentum += timestep * computeTorque();
+
+		// Add friction to the linear velocity and angular momentum, to prevent the Euler method from creating energy:
+		m_vLinearVelocity *= m_pParams->linearFriction;
+		m_vAngularMomentum *= m_pParams->angularFriction;
 
 		// Update the current inertial tensor, and use it to update the angular velocity:
 		m_mCurrentInvInertialTensor = computeCurrentInvInertialTensor();
@@ -110,6 +121,8 @@ void Rigidbody::setScale(Vec3 scale) {
 	updateInertialTensors();
 }
 
+void Rigidbody::setParams(SimulationParameters* params) { this->m_pParams = params; }
+
 void Rigidbody::setKinematic(boolean isKinematic) { 
 	this->m_bIsKinematic = true;
 
@@ -129,11 +142,15 @@ void Rigidbody::setKinematic(boolean isKinematic) {
 boolean Rigidbody::isKinematic() const { return m_bIsKinematic; }
 
 Vec3 Rigidbody::getLinearVelocity() const { return m_vLinearVelocity; }
-void Rigidbody::setLinearVelocity(Vec3 linearVelocity) { this->m_vLinearVelocity = linearVelocity; }
+void Rigidbody::setLinearVelocity(Vec3 linearVelocity) { 
+	this->m_vLinearVelocity = linearVelocity;
+	this->m_vPrevLinearVelocity = linearVelocity;
+}
 
 Vec3 Rigidbody::getAngularVelocity() const { return m_vAngularVelocity; }
 void Rigidbody::setAngularVelocity(Vec3 angularVelocity) {
 	this->m_vAngularVelocity = angularVelocity;
+	this->m_vPrevAngularVelocity = angularVelocity;
 
 	// If the rigidbody is not kinematic, update it's angular momentum, since we changed 
 	// it's angular velocity:
@@ -145,7 +162,7 @@ Vec3 Rigidbody::getVelocityOfPoint(Vec3 position) const {
 	return m_vLinearVelocity + m_vAngularVelocity * (position - m_vPosition);
 }
 
-boolean Rigidbody::manageCollision(Rigidbody* other, float c)
+boolean Rigidbody::manageCollision(Rigidbody* other)
 {
 	Mat4 transformA = m_mTransformMatrix;
 	Mat4 transformB = other->m_mTransformMatrix;
@@ -158,6 +175,7 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			return true;
 
 		// Compute the impulse to update both rigidbodies:
+		float c = m_pParams->collisionFactor;
 
 		Vec3 position = collision.collisionPointWorld;
 		Vec3 n = collision.normalWorld;
@@ -173,11 +191,34 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 
 		Vec3 vr = va + cross(wa, xa) - vb - cross(wb, xb);
 
-		// If the collision was already managed, then return:
-		if (dot(vr, n) >= 0)
-			return true;
+		// Compute the numerator of the impulse J:
+		float numJ;
+		if (!m_pParams->enableMicroCollisions) {
+			numJ = -(1 + c) * dot(vr, n);
+		}
+		else {
+			// Using the previous values for va, wa, vb and wb, compute the previous vrel:
+			Vec3 pVa = m_vPrevLinearVelocity;
+			Vec3 pVb = other->m_vPrevLinearVelocity;
+			Vec3 pWa = m_vPrevAngularVelocity;
+			Vec3 pWb = other->m_vPrevAngularVelocity;
+
+			Vec3 prev_vr = pVa + cross(pWa, xa) - pVb - cross(pWb, xb);
+
+			numJ = -dot(vr + c * prev_vr, n);
+		}
+
 
 		if (m_bIsKinematic) {
+			// Little improvement: update the position of the rigidbodies directly, to manage the
+			// situation when rigidbodies are just colliding with vrel = 0:
+			// other->m_vPosition -= collision.depth * n;
+
+			// If the collision was already managed, then return:
+			if (dot(vr, n) >= 0)
+				return true;
+
+
 			// Ma -> +infinity, so invA = 0
 			float Mb = other->m_fMass;
 
@@ -185,7 +226,7 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
 
 			// Result of the impulse:
-			float J = -(1+c) * dot(vr, n) / (1/Mb + dot(B, n));
+			float J = numJ / (1/Mb + dot(B, n));
 
 			// Update the linear velocity of the other rigidbody:
 			other->m_vLinearVelocity = vb - J * n / Mb;
@@ -193,12 +234,16 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			// Update the angular momentum and velocity of the other rigidbody:
 			other->m_vAngularMomentum = other->m_vAngularMomentum - cross(xb, J * n);
 			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
-
-			// Little improvement: update the position of the rigidbodies directly, to manage the
-			// situation when rigidbodies are just colliding with vrel = 0:
-			other->m_vPosition -= collision.depth * n;
 		}
 		else if (other->m_bIsKinematic) {
+			// Little improvement: update the position of the rigidbodies directly, to manage the
+			// situation when rigidbodies are just colliding with vrel = 0:
+			// this->m_vPosition += collision.depth * n;
+
+			// If the collision was already managed, then return:
+			if (dot(vr, n) >= 0)
+				return true;
+
 			// Mb -> +infinity, so invB = 0
 			float Ma = m_fMass;
 
@@ -206,22 +251,27 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			Vec3 A = cross(invIa.transformVector(cross(xa, n)), xa);
 
 			// Result of the impulse:
-			float J = -(1+c) * dot(vr, n) / (1/Ma + dot(A, n));
-
+			float J = numJ / (1/Ma + dot(A, n));
+			
 			// Update the linear velocity of this rigidbody:
 			this->m_vLinearVelocity = va + J * n / Ma;
 
 			// Update the angular momentum and velocity of this rigidbody:
 			this->m_vAngularMomentum = m_vAngularMomentum + cross(xa, J * n);
 			this->m_vAngularVelocity = invIa.transformVector(this->m_vAngularMomentum);
-
-			// Little improvement: update the position of the rigidbodies directly, to manage the
-			// situation when rigidbodies are just colliding with vrel = 0:
-			this->m_vPosition += collision.depth * n;
 		}
 		else {
 			float Ma = m_fMass;
 			float Mb = other->m_fMass;
+
+			// Little improvement: update the position of the rigidbodies directly, to manage the
+			// situation when rigidbodies are just colliding with vrel = 0:
+			// this->m_vPosition += Mb * collision.depth * n / (Ma + Mb);
+			// other->m_vPosition -= Ma * collision.depth * n / (Ma + Mb);
+
+			// If the collision was already managed, then return:
+			if (dot(vr, n) >= 0)
+				return true;
 
 			Mat4 invIa = m_mCurrentInvInertialTensor;
 			Mat4 invIb = other->m_mCurrentInvInertialTensor;
@@ -230,7 +280,7 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
 
 			// Result of the impulse:
-			float J = -(1+c) * dot(vr, n) / (1/Ma + 1/Mb + dot(A + B, n));
+			float J = numJ / (1/Ma + 1/Mb + dot(A + B, n));
 
 			// Update va and vb for both rigidbodies:
 			this->m_vLinearVelocity = va + J * n / Ma;
@@ -246,11 +296,6 @@ boolean Rigidbody::manageCollision(Rigidbody* other, float c)
 			// Update the angular velocity of both rigidbodies:
 			this->m_vAngularVelocity = invIa.transformVector(this->m_vAngularMomentum);
 			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
-
-			// Little improvement: update the position of the rigidbodies directly, to manage the
-			// situation when rigidbodies are just colliding with vrel = 0:
-			this->m_vPosition += Mb * collision.depth * n / (Ma + Mb);
-			other->m_vPosition -= Ma * collision.depth * n / (Ma + Mb);
 		}
 	}
 
