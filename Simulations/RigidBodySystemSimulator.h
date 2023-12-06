@@ -52,20 +52,26 @@ private:
 	// UI Attributes
 	Point2D m_prevmouse;		// Previous mouse position
 	boolean m_bMousePressed;
-	boolean m_bKeyF_Pressed;	// If the key F is pressed or not
 
 	vector<Rigidbody> m_vRigidbodies;
 
 	// Set of parameters used for the simulation, that can be changed in the UI:
 	SimulationParameters m_SimulationParameters;
+	float m_fBoxSize = 1;
+	float m_fGravityForce = 10000;	// Only used for Demo Complex
+	int m_iDebugLine = 0;
 
-	void setupDemo1();
-	void setupDemo2();
-	void setupComplex();
-	void setupTower();
-	void setupDominos();
+	// Used to generate random colors:
+	std::mt19937 eng;
+	std::uniform_real_distribution<float> randCol;
+
+	void setupDemoSingleBody();
+	void setupDemoCollision();
+	void setupDemoComplex();
+	
+	void updateForces();
 	void manageCollisions();
-	void manageKeyEvents();
 	void fireRigidbody();
+	void startExplosion();
 };
 #endif

@@ -5,7 +5,6 @@
 // Define a structure to put all the parameters describing the physics parameters of the rigidbody;
 struct SimulationParameters {
 	float collisionFactor;
-	boolean enableMicroCollisions;
 
 	// Two factors added to avoid creating energy with the Euler integration method:
 	float linearFriction;
@@ -23,12 +22,13 @@ public:
 	// Create a rigidbody with an orientation defined with a quaternion:
 	Rigidbody(SimulationParameters* params, float mass, Vec3 position, Quat rotation, Vec3 scale);
 
-	void draw(DrawingUtilitiesClass * DUC) const;
+	void draw(DrawingUtilitiesClass * DUC, int debugLine) const;
 
 	void timestepEuler(float timestep);
 
-	void applyTorque(Vec3 location, Vec3 force);
-	void applyForce(Vec3 force);
+	void addTorque(Vec3 location, Vec3 force);
+	void addForce(Vec3 force);
+	void setForce(Vec3 force);
 	void clearForces();
 
 	// Add some getters and setters:
@@ -59,7 +59,7 @@ public:
 	// Compute the velocity of the given position in global space, if it was part of the rigidbody:
 	Vec3 getVelocityOfPoint(Vec3 position) const;
 
-	boolean manageCollision(Rigidbody* other);
+	void manageCollision(Rigidbody* other);
 
 private:
 	void updateTransformMatrices();		// We need to call this when we update the position, rotation or scale of the rigidbody
@@ -84,11 +84,6 @@ private:
 
 	Vec3 m_vLinearVelocity;
 	Vec3 m_vAngularVelocity;
-
-	// Two vectors containing the previous linear and angular velocities, to perform micro collisions,
-	// as defined in the "rigidbody extension 1" slides of the course:
-	Vec3 m_vPrevLinearVelocity;
-	Vec3 m_vPrevAngularVelocity;
 
 	// Rotation and transformation matrices:
 	Mat4 m_mRotMat;
