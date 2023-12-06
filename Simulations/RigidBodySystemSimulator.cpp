@@ -165,12 +165,12 @@ void RigidBodySystemSimulator::initTable1()
 	Rigidbody& rb = m_vRigidbodies.front();
 	rb.m_mRotMat.initRotationZ(90);
 	rb.m_qOrientation = Quat(rb.m_mRotMat);
-	rb.addForce(Vec3(1, 1, 0), Vec3(0.3, 0.5, 0.25));
+	rb.addForce(Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
 }
 
 void RigidBodySystemSimulator::demo1TimeStep(float timeStep) {
 	// single time step impl
-	for (Rigidbody rb : m_vRigidbodies) 
+	for (Rigidbody& rb : m_vRigidbodies) 
 	{
 		rb.timestepEuler(timeStep);
 	}
