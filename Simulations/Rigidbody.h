@@ -15,6 +15,7 @@ public:
     void updateTransformMatrices();
     void updateInertialTensor0s();
     void updateCurrentInertialTensor();
+    std::string toString();
     bool manageCollision(Rigidbody* other, float c);
 
     Vec3 color;

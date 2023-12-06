@@ -36,7 +36,7 @@ public:
 	void setVelocityOf(int i, Vec3 velocity);
 
 	void initTable1();
-	void timestepEuler(float timestep);
+	void demo1TimeStep(float timestep);
 
 private:
 	// Attributes

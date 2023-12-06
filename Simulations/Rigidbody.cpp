@@ -82,3 +82,13 @@ void Rigidbody::updateCurrentInertialTensor()
 		this->m_vAngularMomentum = (invRotMat * m_mInvInertialTensor0 * m_mRotMat).transformVector(m_vAngularVelocity);
 	}
 }
+
+std::string Rigidbody::toString() {
+	std::string s;
+	s = "\tp: " + m_vPosition.toString()
+		+ "\n\tv: " + m_vLinearVelocity.toString()
+		+ "\n\tf: " + m_vSumForces.toString() + '\n';
+	//<< "\n\tm:" << m_fMass << '\n';
+	s += '\n';
+	return s;
+}

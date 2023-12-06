@@ -1,5 +1,4 @@
 #include "RigidBodySystemSimulator.h"
-#include "Rigidbody.h"
 
 RigidBodySystemSimulator::RigidBodySystemSimulator()
 {
@@ -29,32 +28,33 @@ void RigidBodySystemSimulator::onMouse(int x, int y) {
 
 int RigidBodySystemSimulator::getNumberOfRigidBodies()
 {
-	return m_vRigidboxes.size();
+	return m_vRigidbodies.size();
 }
 
 Vec3 RigidBodySystemSimulator::getPositionOfRigidBody(int i)
 {
-	return m_vRigidboxes.at(i).m_vPosition;
+	return m_vRigidbodies.at(i).m_vPosition;
 }
 
 Vec3 RigidBodySystemSimulator::getLinearVelocityOfRigidBody(int i)
 {
-	return m_vRigidboxes.at(i).m_vVelocity;
+	return m_vRigidbodies.at(i).m_vLinearVelocity;
 }
 
 Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
 {
-	return m_vRigidboxes.at(i).m_vAngularVelocity;
+	return m_vRigidbodies.at(i).m_vAngularVelocity;
 }
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
 {
-	m_vRigidboxes.push_back(Rigidbox(position, size, mass));
+	Rigidbody rb = Rigidbody(mass, position, Quat(), size);
+	m_vRigidbodies.push_back(rb);
 }
 
 void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
 {
-	m_vRigidboxes.at(i).m_qOrientation = orientation;
+	m_vRigidbodies.at(i).m_qOrientation = orientation;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -89,10 +89,10 @@ void RigidBodySystemSimulator::reset() {
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
-	for (auto& rb : m_vRigidboxes) 
+	for (auto& rb : m_vRigidbodies) 
 	{
 		DUC->setUpLighting(Vec3(0, 0, 0), 0.4 * Vec3(1, 1, 1), 2000.0, Vec3(0.5, 0.5, 0.5));
-		DUC->drawRigidBody(rb.m_mObjToWorld);
+		DUC->drawRigidBody(rb.m_mTransformMatrix);
 	}
 
 }
@@ -105,12 +105,12 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 	case 0: // single timestep
 		initTable1();
 		cout << "Demo 1, a simple one-step test\n";
-		for (auto& rb : m_vRigidboxes) {
+		for (auto& rb : m_vRigidbodies) {
 			cout << rb.toString();
 		}
 		cout << "timestepEuler(2)\n";
-		timestepEuler(2);  // 1 step
-		for (auto& rb : m_vRigidboxes) {
+		demo1TimeStep(2);  // 1 step
+		for (auto& rb : m_vRigidbodies) {
 			cout << rb.toString();
 		}
 		break;
@@ -156,42 +156,23 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 
 void RigidBodySystemSimulator::initTable1() 
 {
-	m_vRigidboxes.clear();
+	m_vRigidbodies.clear();
 
 	Vec3 pos = Vec3(0, 0, 0);
 	Vec3 size = Vec3(1, 0.6, 0.5);
 
 	addRigidBody(pos, size, 2);
-	Rigidbox& rb = m_vRigidboxes.front();
-	rb.m_mRotation.initRotationZ(90);
-	rb.m_qOrientation = Quat(rb.m_mRotation);
+	Rigidbody& rb = m_vRigidbodies.front();
+	rb.m_mRotMat.initRotationZ(90);
+	rb.m_qOrientation = Quat(rb.m_mRotMat);
 	rb.addForce(Vec3(1, 1, 0), Vec3(0.3, 0.5, 0.25));
 }
 
-void RigidBodySystemSimulator::timestepEuler(float timeStep) {
-	// single time step impl here. TODO in ne andere func
-
+void RigidBodySystemSimulator::demo1TimeStep(float timeStep) {
+	// single time step impl
 	for (Rigidbody rb : m_vRigidbodies) 
 	{
-
-		rb.timestepEuler(timeStep)
+		rb.timestepEuler(timeStep);
 	}
-
-	//m_vRigidboxes.back().
-
-	// update current positions
-	//updateCurrentPositions(timeStep);
-
-	// update current velocities
-	//updateCurrentVelocities(timeStep);
 }
 
-std::string RigidBodySystemSimulator::Rigidbox::toString() {
-	std::string s;
-	s = "\tp: " + m_vPosition.toString()
-		+ "\n\tv: " + m_vVelocity.toString()
-		+ "\n\tf: " + m_vForce.toString() + '\n';
-	//<< "\n\tm:" << m_fMass << '\n';
-	s += '\n';
-	return s;
-}
