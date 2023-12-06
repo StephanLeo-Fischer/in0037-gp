@@ -1,14 +1,5 @@
 #include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
-#include "RigidBodySystemSimulator.h"
+#include "Rigidbody.h"
 
 RigidBodySystemSimulator::RigidBodySystemSimulator()
 {
@@ -180,21 +171,10 @@ void RigidBodySystemSimulator::initTable1()
 void RigidBodySystemSimulator::timestepEuler(float timeStep) {
 	// single time step impl here. TODO in ne andere func
 
-	for (auto& rb : m_vRigidboxes) 
+	for (Rigidbody rb : m_vRigidbodies) 
 	{
 
-
-		rb.m_vPosition += timeStep * rb.m_vVelocity;
-		rb.m_vVelocity += timeStep * rb.m_vForce / rb.m_fMass;
-		rb.m_qOrientation += (timeStep / 2) * Quat(rb.m_vAngularVelocity.x, rb.m_vAngularVelocity.y, rb.m_vAngularVelocity.z, 0) * rb.m_qOrientation;
-		rb.m_vMomentum += timeStep * rb.m_vTorque;
-		Mat4 transposedRotation = rb.m_mRotation;
-		transposedRotation.transpose();
-		Mat4 inertiaTensorInverse = rb.m_mRotation * rb.m_mInitialInersiaTensorInverse * transposedRotation;
-		rb.m_vAngularVelocity = inertiaTensorInverse * rb.m_vMomentum;
-
-		
-
+		rb.timestepEuler(timeStep)
 	}
 
 	//m_vRigidboxes.back().

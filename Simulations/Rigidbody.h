@@ -33,8 +33,6 @@ public:
     Vec3 m_vSumForces;
     Vec3 m_vTorque;
 
-
-    Mat4 m_mRotMat;
     Mat4 m_mTransformMatrix;  // scaleMat * rotMat * translatMat
 
     Mat4 m_mInertialTensor0;
