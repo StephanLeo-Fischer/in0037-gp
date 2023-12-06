@@ -41,6 +41,17 @@ void Rigidbody::clearForces()
 	m_vTorque = Vec3();
 }
 
+void Rigidbody::updateTransformMatrices()
+{
+	this->m_mRotMat = m_qOrientation.getRotMat();
+	// transformation matrix (scaleMat * rotMat * translatMat):
+	Mat4 tmp;
+	tmp.initScaling(m_vScale.x, m_vScale.y, m_vScale.z);
+	this->m_mTransformMatrix = tmp * m_mRotMat;
+	tmp.initTranslation(m_vPosition.x, m_vPosition.y, m_vPosition.z);
+	this->m_mTransformMatrix = m_mTransformMatrix * tmp;
+}
+
 void Rigidbody::updateInertialTensor0s()
 {
 	// Compute the initial inertial tensor and it's inverse:
