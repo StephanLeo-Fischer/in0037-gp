@@ -37,7 +37,6 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 
 	case DEMO2_SINGLE_BODY:
 		// some interaction methods
-		TwAddButton(DUC->g_pTweakBar, "Fire Rigidbody", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->fireRigidbody(); }, nullptr, "");
 		TwAddButton(DUC->g_pTweakBar, "Explosion", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->startExplosion(); }, nullptr, "");
 		break;
 
@@ -380,24 +379,38 @@ void RigidBodySystemSimulator::fireRigidbody()
 }
 
 void RigidBodySystemSimulator::startExplosion() {
-	if (m_iTestCase == DEMO4_COMPLEX) {
-		const Vec3 center = Vec3(0, 2, 0);
 
-		for (Rigidbody& r : m_vRigidbodies) {
-			Vec3 n = r.getPosition() - center;
-			float distance = norm(n);
-
-			if (distance == 0)
-				continue;
-
-			float EXPLOSION_FORCE = 1000;
-			float MAX_FORCE = 150;
-
-			// Add a gravity force to the object:
-			float force = min(EXPLOSION_FORCE / (distance * distance), MAX_FORCE);
-			
-			// Apply the force to the rigidbody:
-			r.setLinearVelocity(force * n / distance);
-		}
+	Vec3 center;
+	float EXPLOSION_FORCE;
+	float MAX_FORCE;
+	if (m_iTestCase == DEMO4_COMPLEX ) {
+		center = Vec3(0, 2, 0);
+		EXPLOSION_FORCE = 3000;
+		MAX_FORCE = 150;
 	}
+	else if (m_iTestCase == DEMO2_SINGLE_BODY) {
+		center = Vec3(0, 0, 0);
+		EXPLOSION_FORCE = 3;
+		MAX_FORCE = 3;
+	}
+	else {  // default case
+		center = Vec3(0, 2, 0);
+		EXPLOSION_FORCE = 3000;
+		MAX_FORCE = 150;
+	}
+
+	for (Rigidbody& r : m_vRigidbodies) {
+		Vec3 n = r.getPosition() - center;
+		float distance = norm(n);
+
+		if (distance == 0)
+			continue;
+
+		// Add a gravity force to the object:
+		float force = min(EXPLOSION_FORCE / (distance * distance), MAX_FORCE);
+
+		// Apply the force to the rigidbody:
+		r.setLinearVelocity(r.getLinearVelocity() + force * n / distance);
+	}
+
 }
