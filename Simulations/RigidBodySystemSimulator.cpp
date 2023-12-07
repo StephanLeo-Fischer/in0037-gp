@@ -268,7 +268,8 @@ void RigidBodySystemSimulator::setupDemoCollision()
 	
 	Rigidbody plank = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 0, 0), Vec3(0, 0, 20), Vec3(2, 0.1, 0.01));
 	plank.color = Vec3(0.6, 0.27, 0.03);
-	plank.setForce(Vec3(0, -GRAVITY_FACTOR, 0));
+	//plank.setForce(Vec3(0, -GRAVITY_FACTOR, 0));  // "Gravity forces may not be used for Demos 1 to 3 [...]" ~Recommendations & Tips
+	plank.setLinearVelocity(Vec3(0, -0.2, 0));
 
 	m_vRigidbodies.push_back(ground);
 	m_vRigidbodies.push_back(plank);
