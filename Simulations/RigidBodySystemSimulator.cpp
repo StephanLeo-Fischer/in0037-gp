@@ -114,7 +114,6 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 			cout << rb.toString();
 			cout << "\nworld vel of (0.3, 0.5, 0.25)" << rb.worldVelocityOfPoint(Vec3(0.3, 0.5, 0.25)) << endl;
 			cout << "\nworld vel of (-0.3, -0.5, -0.25)" << rb.worldVelocityOfPoint(Vec3(-0.3, -0.5, -0.25)) << endl;
-			cout << rb.toString();
 		}
 		break;
 

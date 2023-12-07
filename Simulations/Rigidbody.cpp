@@ -112,9 +112,8 @@ Vec3 Rigidbody::worldVelocityOfPoint(Vec3 point)  // vll richtig?
 
 std::string Rigidbody::toString() {
 	std::string s;
-	s = "\tp: " + m_vPosition.toString()
-		+ "\n\tv: " + m_vLinearVelocity.toString()
-		+ "\n\tf: " + m_vSumForces.toString() + '\n';
+	s = "\tangVel: " + m_vAngularVelocity.toString()
+		+ "\n\tLinVel: " + m_vLinearVelocity.toString() + '\n';
 	//<< "\n\tm:" << m_fMass << '\n';
 	s += '\n';
 	return s;
