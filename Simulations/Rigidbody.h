@@ -15,6 +15,7 @@ public:
     void updateTransformMatrices();
     void updateInertialTensor0s();
     void updateCurrentInertialTensor();
+    Vec3 worldVelocityOfPoint(Vec3 point);
     std::string toString();
     bool manageCollision(Rigidbody* other, float c);
 

@@ -94,6 +94,22 @@ void Rigidbody::updateCurrentInertialTensor()
 	}
 }
 
+/*
+Vec3 Rigidbody::getVelocityOfPoint(Vec3 position) const  // theos
+{
+	return m_vLinearVelocity + m_vAngularVelocity * (position - m_vPosition);
+}
+Vec3 Rigidbody::worldVelocityOfPoint(Vec3 point)  // saschas
+{
+	return m_vLinearVelocity + cross(m_vAngularVelocity, point);
+}
+*/
+Vec3 Rigidbody::worldVelocityOfPoint(Vec3 point)  // vll richtig?
+{
+	return m_vLinearVelocity + cross(m_vAngularVelocity, point - m_vPosition);
+}
+
+
 std::string Rigidbody::toString() {
 	std::string s;
 	s = "\tp: " + m_vPosition.toString()

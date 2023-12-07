@@ -111,7 +111,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 		cout << "timestepEuler(2)\n";
 		demo1TimeStep(2);  // 1 step
 		for (auto& rb : m_vRigidbodies) {
-			cout << rb.toString();
+			cout << rb.toString() << "world vel of (0.3, 0.5, 0.25)" <<;
 		}
 		break;
 
