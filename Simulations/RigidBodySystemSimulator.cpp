@@ -36,6 +36,9 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		break;
 
 	case DEMO2_SINGLE_BODY:
+		// some interaction methods
+		TwAddButton(DUC->g_pTweakBar, "Fire Rigidbody", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->fireRigidbody(); }, nullptr, "");
+		TwAddButton(DUC->g_pTweakBar, "Explosion", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->startExplosion(); }, nullptr, "");
 		break;
 
 	case DEMO3_COLLISION:
