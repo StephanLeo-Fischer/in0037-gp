@@ -47,6 +47,7 @@ private:
 	// Simulation Functions
 	void initDemo1();
 	void initDemo3();
+	void initDemo4();
 	void printResults();
 
 	void eulerStep(float timeStep);

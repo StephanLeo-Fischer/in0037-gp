@@ -20,7 +20,9 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	case 2:
 		TwAddVarRW(DUC->g_pTweakBar, "Coeff. o. Rest.", TW_TYPE_FLOAT, &cor, "min=0.1 step=0.1 max=1");
 		break;
-	case 3:break;
+	case 3:
+		TwAddVarRW(DUC->g_pTweakBar, "Coeff. o. Rest.", TW_TYPE_FLOAT, &cor, "min=0.1 step=0.1 max=1");
+		break;
 	default:break;
 	}
 }
@@ -45,32 +47,12 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
 		}
 		break;
 	}
-	
-	/*
-	// Apply the mouse deltas to g_vfMovableObjectPos (move along cameras view plane)
-	Point2D mouseDiff;
-	mouseDiff.x = m_trackmouse.x - m_oldtrackmouse.x;
-	mouseDiff.y = m_trackmouse.y - m_oldtrackmouse.y;
-	if (mouseDiff.x != 0 || mouseDiff.y != 0)
-	{
-		Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
-		worldViewInv = worldViewInv.inverse();
-		Vec3 inputView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
-		Vec3 inputWorld = worldViewInv.transformVectorNormal(inputView);
-		// find a proper scale!
-		float inputScale = 0.001f;
-		inputWorld = inputWorld * inputScale;
-		m_vfMovableObjectPos = m_vfMovableObjectFinalPos + inputWorld;
-	}
-	else {
-		m_vfMovableObjectFinalPos = m_vfMovableObjectPos;
-	}
-	*/
 }
 
 void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 {
 	rigidbodies.clear();
+	cor = 0.5;
 	m_iTestCase = testCase;
 	switch (m_iTestCase)
 	{
@@ -90,6 +72,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 		break;
 	case 3:
 		cout << "Demo 4!\n";
+		initDemo4();
 		break;
 	default:
 		cout << "Empty Test!\n";
@@ -99,6 +82,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase)
 
 void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed)
 {
+
 }
 
 void RigidBodySystemSimulator::simulateTimestep(float timeStep)
@@ -111,6 +95,10 @@ void RigidBodySystemSimulator::simulateTimestep(float timeStep)
 		eulerStep(timeStep);
 		collisionHandling();
 		break;
+	case 3:
+		externalForcesCalculations(timeStep);
+		eulerStep(timeStep);
+		collisionHandling();
 	default:
 		break;
 	}
@@ -120,38 +108,44 @@ void RigidBodySystemSimulator::onClick(int x, int y)
 {
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
+
+	
 }
 
 void RigidBodySystemSimulator::onMouse(int x, int y)
 {
-	m_oldtrackmouse.x = x;
-	m_oldtrackmouse.y = y;
+	m_oldtrackmouse.x = m_trackmouse.x;
+	m_oldtrackmouse.y = m_trackmouse.y;
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
 }
 
 int RigidBodySystemSimulator::getNumberOfRigidBodies()
 {
-	return 0;
+	return rigidbodies.size();
 }
 
 Vec3 RigidBodySystemSimulator::getPositionOfRigidBody(int i)
 {
-	return Vec3();
+	if (i < 0 || i >= getNumberOfRigidBodies()) return Vec3();
+	return rigidbodies.at(i).position;
 }
 
 Vec3 RigidBodySystemSimulator::getLinearVelocityOfRigidBody(int i)
 {
-	return Vec3();
+	if (i < 0 || i >= getNumberOfRigidBodies()) return Vec3();
+	return rigidbodies.at(i).linearVelocity;
 }
 
 Vec3 RigidBodySystemSimulator::getAngularVelocityOfRigidBody(int i)
 {
-	return Vec3();
+	if (i < 0 || i >= getNumberOfRigidBodies()) return Vec3();
+	return rigidbodies.at(i).angularVelocity;
 }
 
 void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 loc, Vec3 force)
 {
+	if (i < 0 || i >= getNumberOfRigidBodies()) return;
 	rigidbodies.at(i).addForce(loc, force);
 }
 
@@ -162,10 +156,14 @@ void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass)
 
 void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation)
 {
+	if (i < 0 || i >= getNumberOfRigidBodies()) return;
+	rigidbodies.at(i).orientation = orientation;
 }
 
 void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity)
 {
+	if (i < 0 || i >= getNumberOfRigidBodies()) return;
+	rigidbodies.at(i).linearVelocity = velocity;
 }
 
 void RigidBodySystemSimulator::initDemo1()
@@ -179,8 +177,19 @@ void RigidBodySystemSimulator::initDemo3()
 	addRigidBody(Vec3(), Vec3(1), 1, Vec3());
 	addRigidBody(Vec3(0, 3, 0), Vec3(1), 1, Vec3(0, 45, 45));
 
-	rigidbodies.at(0).linearVelocity = Vec3(0, 0.5, 0);
-	rigidbodies.at(1).linearVelocity = Vec3(0, -0.5, 0);
+	setVelocityOf(0, Vec3(0, 0.5, 0));
+	setVelocityOf(1, Vec3(0, -0.5, 0));
+}
+
+void RigidBodySystemSimulator::initDemo4()
+{
+	addRigidBody(Vec3(), Vec3(2, 1, 2), 1, Vec3());
+	addRigidBody(Vec3(0, 2, 0), Vec3(0.5, 1, 0.6), 2, Vec3(0, 45, 45));
+	addRigidBody(Vec3(0, 4, 0), Vec3(1), 1, Vec3());
+	addRigidBody(Vec3(0, 6, 0), Vec3(0.7), 1, Vec3(0, 45, 45));
+
+	setVelocityOf(0, Vec3(0, 0.5, 0));
+	setVelocityOf(3, Vec3(0, -0.5, 0));
 }
 
 void RigidBodySystemSimulator::printResults()
@@ -210,11 +219,11 @@ void RigidBodySystemSimulator::collisionHandling()
 		for (int j = i + 1; j < rigidbodies.size(); j++) {
 
 			Rigidbody& b = rigidbodies.at(j);
-			auto info = checkCollisionSAT(a.toWorldMatrix(), b.toWorldMatrix());
-			if (!info.isValid) return;
+			CollisionInfo info = checkCollisionSAT(a.toWorldMatrix(), b.toWorldMatrix());
+			if (!info.isValid) break;
 
 			Vec3 vrel = a.worldVelocityOfPoint(info.collisionPointWorld - a.position) - b.worldVelocityOfPoint(info.collisionPointWorld - b.position);
-			if (dot(vrel, info.normalWorld) >= 0) return;
+			if (dot(vrel, info.normalWorld) >= 0) break;
 
 			float impulse = calculateImpulse(vrel, a, b, info.collisionPointWorld, info.normalWorld);
 			a.handleCollision(impulse, info.collisionPointWorld, info.normalWorld);
@@ -233,7 +242,6 @@ float RigidBodySystemSimulator::calculateImpulse(Vec3 vrel, Rigidbody a, Rigidbo
 	
 	Vec3 bCollisionPoint = collisionPoint - b.position;
 	auto bInertiaThingy = cross(b.calculateInertia().transformVector(cross(bCollisionPoint, normal)), bCollisionPoint);
-	
 
 	return top / (bottomMasses + dot(aInertiaThingy + bInertiaThingy, normal));
 }
