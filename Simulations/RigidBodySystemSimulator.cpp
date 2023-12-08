@@ -220,10 +220,10 @@ void RigidBodySystemSimulator::collisionHandling()
 
 			Rigidbody& b = rigidbodies.at(j);
 			CollisionInfo info = checkCollisionSAT(a.toWorldMatrix(), b.toWorldMatrix());
-			if (!info.isValid) break;
+			if (!info.isValid) continue;
 
 			Vec3 vrel = a.worldVelocityOfPoint(info.collisionPointWorld - a.position) - b.worldVelocityOfPoint(info.collisionPointWorld - b.position);
-			if (dot(vrel, info.normalWorld) >= 0) break;
+			if (dot(vrel, info.normalWorld) >= 0) continue;
 
 			float impulse = calculateImpulse(vrel, a, b, info.collisionPointWorld, info.normalWorld);
 			a.handleCollision(impulse, info.collisionPointWorld, info.normalWorld);

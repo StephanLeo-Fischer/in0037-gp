@@ -29,7 +29,7 @@ void Rigidbody::linearEulerStep(float timeStep)
 void Rigidbody::angularEulerStep(float timeStep)
 {
 	orientation += (timeStep / 2.0) * Quat(angularVelocity.x, angularVelocity.y, angularVelocity.z, 0) * orientation;
-	orientation.unit();
+	orientation = orientation.unit();
 
 	momentum += torque * timeStep;
 	angularVelocity = calculateInertia().transformVector(momentum);
