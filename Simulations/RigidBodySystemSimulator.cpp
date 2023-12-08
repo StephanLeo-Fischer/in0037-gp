@@ -309,6 +309,7 @@ void RigidBodySystemSimulator::setupDemoComplex()
 	m_vRigidbodies.clear();
 	m_SimulationParameters.angularFriction = 0;
 	m_SimulationParameters.linearFriction = 0;
+	g_fTimestep = 0.001;
 
 	const Vec3 center = Vec3(0, 2, 0);
 	const float CENTER_BOX_SIZE = 1.5;
