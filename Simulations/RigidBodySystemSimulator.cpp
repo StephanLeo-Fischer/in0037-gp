@@ -291,9 +291,9 @@ void RigidBodySystemSimulator::setupDemoCollision()
 	m_SimulationParameters.linearFriction = 0;
 	g_fTimestep = 0.003;
 
-	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 1, 10));
+	Rigidbody ground = Rigidbody(&m_SimulationParameters, 100, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 1, 10));
 	ground.color = Vec3(0.1);
-	ground.setKinematic(true);
+	//ground.setKinematic(true);
 	
 	Rigidbody plank = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 0, 0), Vec3(0, 0, 20), Vec3(2, 0.1, 0.01));
 	plank.color = Vec3(0.6, 0.27, 0.03);
