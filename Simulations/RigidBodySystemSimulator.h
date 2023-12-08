@@ -53,6 +53,11 @@ private:
 	Point2D m_prevmouse;		// Previous mouse position
 	boolean m_bMousePressed;
 
+	Vec3 m_vExternalForce;		// External force applied to the rigid bodies
+	Point2D m_mouse;
+	Point2D m_trackmouse;
+	Point2D m_oldtrackmouse;
+
 	vector<Rigidbody> m_vRigidbodies;
 
 	// Set of parameters used for the simulation, that can be changed in the UI:

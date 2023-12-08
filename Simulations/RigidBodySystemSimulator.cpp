@@ -121,7 +121,23 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 }
 
 // Called each time the mouse is moved while pressed:
-void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed){}
+void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed){
+	Vec3 pullforce(0, 0, 0);
+	Point2D mouseDiff;
+	mouseDiff.x = m_trackmouse.x - m_oldtrackmouse.x;
+	mouseDiff.y = m_trackmouse.y - m_oldtrackmouse.y;
+	if (mouseDiff.x != 0 || mouseDiff.y != 0)
+	{
+		Mat4 worldViewInv = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
+		worldViewInv = worldViewInv.inverse();
+		Vec3 forceView = Vec3((float)mouseDiff.x, (float)-mouseDiff.y, 0);
+		Vec3 forceWorld = worldViewInv.transformVectorNormal(forceView);
+		float forceScale = 0.2f;
+		pullforce = pullforce + (forceWorld * forceScale);
+	}
+
+	m_vExternalForce = pullforce;
+}
 
 void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 	// update current setup for each frame
@@ -152,6 +168,10 @@ void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 // and when the mouse is moved while clicked:
 void RigidBodySystemSimulator::onClick(int x, int y)
 {
+	// added for adding external force
+	m_trackmouse.x = x;
+	m_trackmouse.y = y;
+
 	// The first frame where we have a mouse pressed, we call mousePressed()
 	if (!m_bMousePressed) {
 		m_bMousePressed = true;
@@ -170,6 +190,12 @@ void RigidBodySystemSimulator::onClick(int x, int y)
 // This function is called when the mouse moves or is released, but not clicked:
 void RigidBodySystemSimulator::onMouse(int x, int y)
 {
+	// added for adding external force
+	m_oldtrackmouse.x = x;
+	m_oldtrackmouse.y = y;
+	m_trackmouse.x = x;
+	m_trackmouse.y = y;
+
 	// The first frame where we have a mouse release, we call mouseReleased()
 	if (m_bMousePressed) {
 		m_bMousePressed = false;
@@ -190,7 +216,10 @@ void RigidBodySystemSimulator::mousePressed(int x, int y) {
 }
 
 void RigidBodySystemSimulator::mouseReleased(int x, int y) {
-	// First frame after a mouse release	
+	// First frame after a mouse release
+	if (m_iTestCase == DEMO2_SINGLE_BODY) {
+		applyForceOnBody(0, Vec3(0.3, 0.5, 0.25), m_vExternalForce);
+	}
 }
 
 void RigidBodySystemSimulator::mouseDragged(int x, int y) {
