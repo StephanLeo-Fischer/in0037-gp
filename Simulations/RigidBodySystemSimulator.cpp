@@ -424,9 +424,7 @@ void RigidBodySystemSimulator::startExplosion() {
 		MAX_FORCE = 3;
 	}
 	else {  // default case
-		center = Vec3(0, 2, 0);
-		EXPLOSION_FORCE = 3000;
-		MAX_FORCE = 150;
+		return;
 	}
 
 	for (Rigidbody& r : m_vRigidbodies) {
