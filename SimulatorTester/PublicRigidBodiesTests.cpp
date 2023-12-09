@@ -1,5 +1,5 @@
 #include "CppUnitTest.h"
-#include "RigidBodySystemSimulator.h"
+#include "../Simulations/RigidBodySystemSimulator.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
