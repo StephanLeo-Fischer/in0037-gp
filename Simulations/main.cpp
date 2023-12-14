@@ -27,10 +27,10 @@ using namespace GamePhysics;
 #define DIFFUSION_SYSTEM
 
 #ifdef TEMPLATE_DEMO
-#include "TemplateSimulator.h"
+//#include "TemplateSimulator.h"
 #endif
 #ifdef MASS_SPRING_SYSTEM
-#include "MassSpringSystemSimulator.h"
+//#include "MassSpringSystemSimulator.h"
 #endif
 #ifdef RIGID_BODY_SYSTEM
 //#include "RigidBodySystemSimulator.h"

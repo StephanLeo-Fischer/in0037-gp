@@ -5,7 +5,11 @@
 #include "vectorbase.h"
 
 class Grid {
-	// to be implemented
+public:
+	int n, m;
+	vector<vector<float>> values;
+
+	void setSize(int n, int m);
 };
 
 

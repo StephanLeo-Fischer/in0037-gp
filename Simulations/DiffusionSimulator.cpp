@@ -10,6 +10,8 @@ DiffusionSimulator::DiffusionSimulator()
 	m_vfMovableObjectFinalPos = Vec3();
 	m_vfRotate = Vec3();
 	// rest to be implemented
+
+	T.setSize(16, 16);
 }
 
 const char * DiffusionSimulator::getTestCasesStr(){
@@ -27,6 +29,9 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 {
 	this->DUC = DUC;
 	// to be implemented
+
+	TwAddVarRW(DUC->g_pTweakBar, "Grid Size n", TW_TYPE_INT32, &T.n, "min=1 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "Grid Size m", TW_TYPE_INT32, &T.m, "min=1 step=1");
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -131,4 +136,10 @@ void DiffusionSimulator::onMouse(int x, int y)
 	m_oldtrackmouse.y = y;
 	m_trackmouse.x = x;
 	m_trackmouse.y = y;
+}
+
+void Grid::setSize(int n, int m)
+{
+	this->n = n;
+	this->m = m;
 }
