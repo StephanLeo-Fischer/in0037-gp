@@ -9,7 +9,14 @@ DiffusionSimulator::DiffusionSimulator()
 	m_vfMovableObjectPos = Vec3();
 	m_vfMovableObjectFinalPos = Vec3();
 	m_vfRotate = Vec3();
-	// rest to be implemented
+
+	m_fAlpha = 0.2;					// Thermal diffusivity
+	m_fGridScale = 0.1;
+	m_iGridRows = m_iGridCols = 100;
+	m_fBoundaryTemperature = 0;
+
+	T.resize(m_iGridRows, m_iGridCols, m_fGridScale);
+	nextT.resize(m_iGridRows, m_iGridCols, m_fGridScale);
 }
 
 const char * DiffusionSimulator::getTestCasesStr(){
@@ -20,13 +27,26 @@ void DiffusionSimulator::reset(){
 		m_mouse.x = m_mouse.y = 0;
 		m_trackmouse.x = m_trackmouse.y = 0;
 		m_oldtrackmouse.x = m_oldtrackmouse.y = 0;
-
 }
 
 void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 {
 	this->DUC = DUC;
-	// to be implemented
+	switch (m_iTestCase)
+	{
+	case EXPLICIT_SOLVER:
+	case IMPLICIT_SOLVER:
+		TwAddVarRW(DUC->g_pTweakBar, "Grid rows", TW_TYPE_INT32, &m_iGridRows, "min=1");
+		TwAddVarRW(DUC->g_pTweakBar, "Grid cols", TW_TYPE_INT32, &m_iGridCols, "min=1");
+		TwAddVarRW(DUC->g_pTweakBar, "Grid scale", TW_TYPE_FLOAT, &m_fGridScale, "min=0.005 max=0.1 step=0.001");
+
+		TwAddVarRW(DUC->g_pTweakBar, "Thermal diffusivity (alpha)", TW_TYPE_FLOAT, &m_fAlpha, "min=0 max=2.5 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Boundary temperature", TW_TYPE_FLOAT, &m_fBoundaryTemperature, "min=-100 max=1000 step=1");
+		break;
+
+	default:
+		break;
+	}
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -34,29 +54,48 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	m_iTestCase = testCase;
 	m_vfMovableObjectPos = Vec3(0, 0, 0);
 	m_vfRotate = Vec3(0, 0, 0);
-	//
-	// to be implemented
-	//
+
 	switch (m_iTestCase)
 	{
-	case 0:
+	case EXPLICIT_SOLVER:
 		cout << "Explicit solver!\n";
+		setupDemo1();
 		break;
-	case 1:
+
+	case IMPLICIT_SOLVER:
 		cout << "Implicit solver!\n";
+		setupDemo1();
 		break;
+
 	default:
 		cout << "Empty Test!\n";
 		break;
 	}
 }
 
-void DiffusionSimulator::diffuseTemperatureExplicit() {
-// to be implemented
+void DiffusionSimulator::diffuseTemperatureExplicit(float timestep) {
+	double r = m_fAlpha * timestep / (T.getSize() * T.getSize());
+
+	for (int i = 0; i < T.getRows(); i++) {
+		for (int j = 0; j < T.getCols(); j++) {
+			// Get the value of T, and use the m_fBoundaryTemperature
+			// when the indices are outside from the grid:
+			float tmp = T.get(i + 1, j, m_fBoundaryTemperature)
+				+ T.get(i - 1, j, m_fBoundaryTemperature)
+				+ T.get(i, j + 1, m_fBoundaryTemperature)
+				+ T.get(i, j - 1, m_fBoundaryTemperature)
+				- 4 * T.get(i, j);
+
+			nextT.set(i, j, T.get(i, j) + r * tmp);
+		}
+	}
+
+	// Update the grid with the new values:
+	T.swapValues(&nextT);
 }
 
 
-void DiffusionSimulator::diffuseTemperatureImplicit() {
+void DiffusionSimulator::diffuseTemperatureImplicit(float timestep) {
 	// solve A T = b
 
 	// This is just an example to show how to work with the PCG solver,
@@ -89,28 +128,47 @@ void DiffusionSimulator::diffuseTemperatureImplicit() {
 	// to be implemented
 }
 
+void DiffusionSimulator::setupDemo1()
+{
+	T.resize(m_iGridRows, m_iGridCols, m_fGridScale);
+	nextT.resize(m_iGridRows, m_iGridCols, m_fGridScale);
+
+	int rowMin = 4 * T.getRows() / 10;
+	int rowMax = 6 * T.getRows() / 10;
+	int colMin = 4 * T.getCols() / 10;
+	int colMax = 6 * T.getCols() / 10;
+
+	for(int row = 0; row < T.getRows(); row++) {
+		for (int col = 0; col < T.getCols(); col++) {
+			if ((row < rowMin || row > rowMax) && colMin <= col && col <= colMax)
+				T.set(row, col, 500);
+			else
+				T.set(row, col, 0);
+		}
+	}
+}
 
 
-void DiffusionSimulator::simulateTimestep(float timeStep)
+
+void DiffusionSimulator::simulateTimestep(float timestep)
 {
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{
-	case 0:
+	case EXPLICIT_SOLVER:
 		// feel free to change the signature of this function
-		diffuseTemperatureExplicit();
+		diffuseTemperatureExplicit(timestep);
 		break;
-	case 1:
+	case IMPLICIT_SOLVER:
 		// feel free to change the signature of this function
-		diffuseTemperatureImplicit();
+		diffuseTemperatureImplicit(timestep);
 		break;
 	}
 }
 
 void DiffusionSimulator::drawObjects()
 {
-	// to be implemented
-	//visualization
+	T.draw(DUC);
 }
 
 
