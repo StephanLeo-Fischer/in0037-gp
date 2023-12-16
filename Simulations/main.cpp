@@ -33,10 +33,10 @@ using namespace GamePhysics;
 #include "MassSpringSystemSimulator.h"
 #endif
 #ifdef RIGID_BODY_SYSTEM
-//#include "RigidBodySystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
 #endif
 #ifdef SPH_SYSTEM
-//#include "SPHSystemSimulator.h"
+#include "SPHSystemSimulator.h"
 #endif
 
 #ifdef DIFFUSION_SYSTEM
