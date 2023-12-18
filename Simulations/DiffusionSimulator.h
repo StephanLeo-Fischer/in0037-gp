@@ -87,28 +87,45 @@ public:
 		this->m_data = tmp;
 	}
 
+	// Set all the values of the grid to a unique value:
 	void set(float value) {
 		for (int row = 0; row < m_rows; row++)
 			for (int col = 0; col < m_cols; col++)
-				m_data[m_cols * row + col] = value;
+				m_data[positionToIndex(row, col)] = value;
+	}
+
+	void set(std::vector<Real> values) {
+		if (values.size() != m_rows * m_cols)
+			throw std::runtime_error("Cannot set this vector to this grid: the vector has the wrong size !");
+
+		for (int i = 0; i < values.size(); i++)
+			m_data[i] = values[i];
 	}
 
 	inline void set(int row, int col, float value) {
 		if (row < 0 || row >= m_rows || col < 0 || col >= m_cols)
 			throw std::out_of_range("Grid index is out of range");
 
-		m_data[m_cols * row + col] = value;
+		m_data[positionToIndex(row, col)] = value;
 	}
 
 	inline float get(int row, int col) const {
-		return m_data[m_cols * row + col];
+		return m_data[positionToIndex(row, col)];
 	}
 
-	inline float get(int row, int col, float defaultValue) const {
-		if (row < 0 || row >= m_rows || col < 0 || col >= m_cols)
-			return defaultValue;
+	// Map a position in the 2D grid, to a unique index in the array m_data:
+	inline int positionToIndex(int row, int col) const {
+		return m_cols * row + col;
+	}
 
-		return m_data[m_cols * row + col];
+	// Map an index the array m_data to a unique position in the 2D grid:
+	inline void indexToPosition(int index, int * row, int * col) {
+		*row = index / m_cols;
+		*col = index % m_cols;
+	}
+
+	boolean isBoundaryCell(int row, int col) {
+		return row == 0 || row + 1 == m_rows || col == 0 || col + 1 == m_cols;
 	}
 
 	inline ~Grid() {

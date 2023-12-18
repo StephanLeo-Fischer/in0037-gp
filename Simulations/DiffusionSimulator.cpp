@@ -40,7 +40,7 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 		TwAddVarRW(DUC->g_pTweakBar, "Grid cols", TW_TYPE_INT32, &m_iGridCols, "min=1");
 		TwAddVarRW(DUC->g_pTweakBar, "Grid scale", TW_TYPE_FLOAT, &m_fGridScale, "min=0.005 max=0.1 step=0.001");
 
-		TwAddVarRW(DUC->g_pTweakBar, "Thermal diffusivity (alpha)", TW_TYPE_FLOAT, &m_fAlpha, "min=0 max=2.5 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Thermal diffusivity (alpha)", TW_TYPE_FLOAT, &m_fAlpha, "min=0 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Boundary temperature", TW_TYPE_FLOAT, &m_fBoundaryTemperature, "min=-100 max=1000 step=1");
 		break;
 
@@ -74,19 +74,22 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 }
 
 void DiffusionSimulator::diffuseTemperatureExplicit(float timestep) {
-	double r = m_fAlpha * timestep / (T.getSize() * T.getSize());
+	const double r = m_fAlpha * timestep / (T.getSize() * T.getSize());
 
-	for (int i = 0; i < T.getRows(); i++) {
-		for (int j = 0; j < T.getCols(); j++) {
-			// Get the value of T, and use the m_fBoundaryTemperature
-			// when the indices are outside from the grid:
-			float tmp = T.get(i + 1, j, m_fBoundaryTemperature)
-				+ T.get(i - 1, j, m_fBoundaryTemperature)
-				+ T.get(i, j + 1, m_fBoundaryTemperature)
-				+ T.get(i, j - 1, m_fBoundaryTemperature)
-				- 4 * T.get(i, j);
+	for (int i = 0; i < nextT.getRows(); i++) {
+		for (int j = 0; j < nextT.getCols(); j++) {
+			if (nextT.isBoundaryCell(i, j))
+				nextT.set(i, j, m_fBoundaryTemperature);
 
-			nextT.set(i, j, T.get(i, j) + r * tmp);
+			else {
+				float tmp = T.get(i + 1, j)
+					+ T.get(i - 1, j)
+					+ T.get(i, j + 1)
+					+ T.get(i, j - 1)
+					- 4 * T.get(i, j);
+
+				nextT.set(i, j, T.get(i, j) + r * tmp);
+			}			
 		}
 	}
 
@@ -98,16 +101,36 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timestep) {
 void DiffusionSimulator::diffuseTemperatureImplicit(float timestep) {
 	// solve A T = b
 
-	// This is just an example to show how to work with the PCG solver,
-	const int nx = 5;
-	const int ny = 5;
-	const int nz = 5;
-	const int N = nx * ny * nz;
+	const int N = T.getRows() * T.getCols();
+	const double r = m_fAlpha * timestep / (T.getSize() * T.getSize());
 
 	SparseMatrix<Real> A(N);
 	std::vector<Real> b(N);
 
-	// This is the part where you have to assemble the system matrix A and the right-hand side b!
+	// Set each row of the matrix A:
+	int row, col;
+	for (int i = 0; i < N; i++) {
+		T.indexToPosition(i, &row, &col);
+
+		if (T.isBoundaryCell(row, col)) {
+			A.set_element(i, T.positionToIndex(row, col), 1);
+			T.set(row, col, m_fBoundaryTemperature);
+		}
+		else {
+			A.set_element(i, T.positionToIndex(row, col), 1 + 4 * r);
+			A.set_element(i, T.positionToIndex(row + 1, col), -r);
+			A.set_element(i, T.positionToIndex(row - 1, col), -r);
+			A.set_element(i, T.positionToIndex(row, col + 1), -r);
+			A.set_element(i, T.positionToIndex(row, col - 1), -r);
+		}
+	}
+
+	// Set b:
+	for (int i = 0; i < N; i++) {
+		T.indexToPosition(i, &row, &col);
+
+		b[i] = T.get(row, col);
+	}
 
 	// perform solve
 	Real pcg_target_residual = 1e-05;
@@ -125,7 +148,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timestep) {
 	solver.solve(A, b, x, ret_pcg_residual, ret_pcg_iterations, 0);
 
 	// Final step is to extract the grid temperatures from the solution vector x
-	// to be implemented
+	T.set(x);
 }
 
 void DiffusionSimulator::setupDemo1()
