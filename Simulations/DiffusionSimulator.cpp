@@ -65,12 +65,15 @@ void DiffusionSimulator::setup2DDiffusion() {
 	grid = Grid(gridWidth, gridHeight);
 }
 
-void DiffusionSimulator::diffuseTemperatureExplicit() {
-	// T^{t+1}_{ij} = alpha(..bigThing..) * delta t + T^t_{ij}
+void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
+	// forward finite diff
+	// T^{t+1}_{ij} = alpha(..bigThing..) * delta t + T^t_{ij} 
 	for (int i = 0; i < gridWidth; i++) {
 		for (int j = 0; j < gridHeight; i++) {
-			float nexValue = alpha *
-			grid.grid.at(i).at(j) = nextValue;
+			float bigThing = (grid.grid.at(i+2).at(j) - 2 * grid.grid.at(i + 1).at(j) - grid.grid.at(i).at(j)) / (deltaX * deltaX)  
+				+ (grid.grid.at(i).at(j + 2) - 2 * grid.grid.at(i).at(j + 1) - grid.grid.at(i).at(j)) / (deltaY * deltaY);
+			float nextValue = alpha * bigThing * timeStep + grid.grid.at(i).at(j);
+			grid.grid.at(i).at(j) = nextValue;  // after delta t
 		}
 	}
 }
@@ -118,7 +121,7 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 	{
 	case 0:
 		// feel free to change the signature of this function
-		diffuseTemperatureExplicit();
+		diffuseTemperatureExplicit(timeStep);
 		break;
 	case 1:
 		// feel free to change the signature of this function

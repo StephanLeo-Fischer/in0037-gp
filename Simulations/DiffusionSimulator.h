@@ -47,7 +47,7 @@ public:
 	void drawObjects();
 
 	// Feel free to change the signature of these functions, add arguments, etc.
-	void diffuseTemperatureExplicit();
+	void diffuseTemperatureExplicit(float timeStep);
 	void diffuseTemperatureImplicit();
 
 	void setup2DDiffusion();
@@ -66,6 +66,8 @@ private:
 	float alpha;
 	int gridWidth;
 	int gridHeight;
+	int deltaX;
+	int deltaY;
 
 };
 
