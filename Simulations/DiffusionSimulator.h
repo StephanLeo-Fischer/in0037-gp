@@ -6,6 +6,10 @@
 
 class Grid {
 	vector<vector<float>> grid;
+public:
+	Grid() {
+		
+	}
 
 	Grid::Grid(int width, int height) {
 		for (int i = 0; i < width; i++) {
