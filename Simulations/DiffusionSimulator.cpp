@@ -26,7 +26,13 @@ void DiffusionSimulator::reset(){
 void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 {
 	this->DUC = DUC;
-	// to be implemented
+	switch (m_iTestCase)
+	{
+	case EXPLICIT_SOLVER_2D:  // fall through, because same parameters
+	case IMPLICIT_SOLVER_2D:
+		TwAddVarRW(DUC->g_pTweakBar, "Thermal diffusivity (alpha)", TW_TYPE_FLOAT, &alpha, "min=0 step=0.01");
+		break;
+	}
 }
 
 void DiffusionSimulator::notifyCaseChanged(int testCase)
@@ -39,11 +45,13 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	//
 	switch (m_iTestCase)
 	{
-	case 0:
+	case EXPLICIT_SOLVER_2D:
 		cout << "Explicit solver!\n";
+		setup2DDiffusion();
 		break;
-	case 1:
+	case IMPLICIT_SOLVER_2D:
 		cout << "Implicit solver!\n";
+		setup2DDiffusion();
 		break;
 	default:
 		cout << "Empty Test!\n";
@@ -51,8 +59,20 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	}
 }
 
+void DiffusionSimulator::setup2DDiffusion() {
+	gridWidth, gridHeight = 4;
+
+	grid = Grid(gridWidth, gridHeight);
+}
+
 void DiffusionSimulator::diffuseTemperatureExplicit() {
-// to be implemented
+	// T^{t+1}_{ij} = alpha(..bigThing..) * delta t + T^t_{ij}
+	for (int i = 0; i < gridWidth; i++) {
+		for (int j = 0; j < gridHeight; i++) {
+			float nexValue = alpha *
+			grid.grid.at(i).at(j) = nextValue;
+		}
+	}
 }
 
 

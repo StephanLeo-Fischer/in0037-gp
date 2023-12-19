@@ -4,9 +4,15 @@
 #include "Simulator.h"
 #include "vectorbase.h"
 
+
+#define EXPLICIT_SOLVER_2D 0
+#define IMPLICIT_SOLVER_2D 1
+
+
 class Grid {
-	vector<vector<float>> grid;
 public:
+	vector<vector<float>> grid;
+
 	Grid() {
 		
 	}
@@ -17,6 +23,7 @@ public:
 				grid.at(i).push_back(0);  // j mal 
 		}
 	}
+
 };
 
 
@@ -43,6 +50,8 @@ public:
 	void diffuseTemperatureExplicit();
 	void diffuseTemperatureImplicit();
 
+	void setup2DDiffusion();
+
 private:
 	// Attributes
 	Vec3  m_vfMovableObjectPos;
@@ -51,7 +60,13 @@ private:
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
-	Grid T;
+	Grid grid;
+
+
+	float alpha;
+	int gridWidth;
+	int gridHeight;
+
 };
 
 #endif
