@@ -7,9 +7,22 @@
 class Grid {
 public:
 	int n, m;
+	int newN, newM;
 	vector<vector<float>> values;
+	vector<vector<float>> temp;
 
 	void setSize(int n, int m);
+	bool isBoundary(int i, int j);
+
+	float getValue(int i, int j);
+	void setValue(int i, int j, float value);
+	void setTemp(int i, int j, float value);
+
+	void initValues();
+	void initTemp();
+
+	bool valIsInRange(int i, int j);
+	bool tempIsInRange(int i, int j);
 };
 
 
@@ -33,8 +46,8 @@ public:
 	void drawObjects();
 
 	// Feel free to change the signature of these functions, add arguments, etc.
-	void diffuseTemperatureExplicit();
-	void diffuseTemperatureImplicit();
+	void diffuseTemperatureExplicit(float timeStep);
+	void diffuseTemperatureImplicit(float timeStep);
 
 private:
 	// Attributes
@@ -45,6 +58,8 @@ private:
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
 	Grid T;
+
+	float diffusionConst;
 };
 
 #endif
