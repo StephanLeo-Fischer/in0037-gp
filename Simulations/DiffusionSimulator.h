@@ -19,8 +19,10 @@ public:
 
 	Grid::Grid(int width, int height) {
 		for (int i = 0; i < width; i++) {
+			vector<float> tmpVec;
+			grid.push_back(tmpVec);
 			for (int j = 0; i < height; i++)
-				grid.at(i).push_back(0);  // j mal 
+				grid.at(i).push_back(rand());  // j mal 
 		}
 	}
 

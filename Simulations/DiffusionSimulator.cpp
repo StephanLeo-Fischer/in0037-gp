@@ -60,7 +60,8 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 }
 
 void DiffusionSimulator::setup2DDiffusion() {
-	gridWidth, gridHeight = 4;
+	gridWidth = 16;
+	gridHeight = 16;
 
 	grid = Grid(gridWidth, gridHeight);
 }
@@ -133,8 +134,29 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 
 void DiffusionSimulator::drawObjects()
 {
-	// to be implemented
+	cout << "height" << gridHeight << "width" << gridWidth << endl;
 	//visualization
+	for (int idx_x = 0; idx_x < gridWidth; idx_x++) {
+		for (int idx_y = 0; idx_y < gridHeight; idx_y++) {
+			
+			/* For visualization, you could use spheres to represent every point position and use the color of the
+				sphere to represent the temperature of this point position (red for negative value and white for
+				positive value). Then, we can see how the equation is solved by observing color change.
+				*/
+			DUC->setUpLighting(
+				abs(grid.grid.at(idx_x).at(idx_y)) * Vec3(            // emmisive color															
+					1,									            // red
+					grid.grid.at(idx_x).at(idx_y) > 0 ? 1 : 0,	// green
+					grid.grid.at(idx_x).at(idx_y) > 0 ? 1 : 0),   // blue
+				0.4 * Vec3(1, 1, 1),									// specular color
+				10,														// specular power
+				abs(grid.grid.at(idx_x).at(idx_y)) * Vec3(1, 1, 1));	// diffuse color
+			DUC->drawSphere(
+				0.1 * Vec3(idx_x - int(gridWidth / 2), idx_y - int(gridHeight / 2), 0),	// position
+				0.1 * Vec3(1, 1, 1)															// scale
+			);
+		}
+	}
 }
 
 
