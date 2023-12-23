@@ -3,6 +3,7 @@
 
 #include "Simulator.h"
 #include "vectorbase.h"
+#include <limits>
 
 
 #define EXPLICIT_SOLVER_2D 0
@@ -18,13 +19,31 @@ public:
 	}
 
 	Grid::Grid(int width, int height) {
+		// resize to match size
+		grid.resize(width); 
+		for (vector<float>& v : grid) {
+			v.resize(height);
+		}
+
+		srand((unsigned)time(0));
 		for (int i = 0; i < width; i++) {
 			vector<float> tmpVec;
 			grid.push_back(tmpVec);
-			for (int j = 0; i < height; i++)
-				grid.at(i).push_back(rand());  // j mal 
+			for (int j = 0; j < height; j++) {
+				float r;
+				r = rand() / std::numeric_limits<int>::max();
+				grid.at(i).push_back(r);  // j mal 
+			}
+				
+		}
+
+		for (int i = 0; i < width; i++) {
+			cout << endl;
+			for (int j = 0; j < height; j++)
+				cout << grid.at(i).at(j);
 		}
 	}
+
 
 };
 

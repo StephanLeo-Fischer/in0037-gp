@@ -60,21 +60,31 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 }
 
 void DiffusionSimulator::setup2DDiffusion() {
-	gridWidth = 16;
-	gridHeight = 16;
+	gridWidth = 4;
+	gridHeight = 4;
 
 	grid = Grid(gridWidth, gridHeight);
 }
 
 void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
-	// forward finite diff
+	// forward finite diff  not working, because you need 2 ahead
 	// T^{t+1}_{ij} = alpha(..bigThing..) * delta t + T^t_{ij} 
 	// temperature = 0 in boundary cells, thats why from 1 to width-1
+	//for (int i = 1; i < gridWidth - 1; i++) {
+	//	for (int j = 1; j < gridHeight - 1; i++) {
+	//		float bigThing = (grid.grid.at(i+2).at(j) - 2 * grid.grid.at(i + 1).at(j) + grid.grid.at(i).at(j)) / (deltaX * deltaX)  
+	//			+ (grid.grid.at(i).at(j + 2) - 2 * grid.grid.at(i).at(j + 1) + grid.grid.at(i).at(j)) / (deltaY * deltaY);
+	//		float nextValue = alpha * bigThing * timeStep + grid.grid.at(i).at(j);
+	//		grid.grid.at(i).at(j) = nextValue;  // after delta t
+	//	}
+	//}
+
+	// central diff
 	for (int i = 1; i < gridWidth - 1; i++) {
 		for (int j = 1; j < gridHeight - 1; i++) {
-			float bigThing = (grid.grid.at(i+2).at(j) - 2 * grid.grid.at(i + 1).at(j) + grid.grid.at(i).at(j)) / (deltaX * deltaX)  
-				+ (grid.grid.at(i).at(j + 2) - 2 * grid.grid.at(i).at(j + 1) + grid.grid.at(i).at(j)) / (deltaY * deltaY);
-			float nextValue = alpha * bigThing * timeStep + grid.grid.at(i).at(j);
+			float bigThing = (grid.grid.at(i + 1).at(j) - 2 * grid.grid.at(i).at(j) + grid.grid.at(i -1).at(j)) / (deltaX * deltaX)
+				+ (grid.grid.at(i).at(j + 1) - 2 * grid.grid.at(i).at(j) + grid.grid.at(i).at(j - 1)) / (deltaY * deltaY);
+			float nextValue = alpha * bigThing * 2 * timeStep + grid.grid.at(i).at(j);
 			grid.grid.at(i).at(j) = nextValue;  // after delta t
 		}
 	}
