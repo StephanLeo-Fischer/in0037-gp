@@ -3,9 +3,23 @@
 
 #include "Simulator.h"
 #include "vectorbase.h"
+#include "pcgsolver.h"
 
 class Grid {
 	// to be implemented
+public:
+	// Construtors
+	Grid(int nx, int ny, int nz);
+
+	// Functions
+	void setT(std::vector<Real>& x);
+	void setValue(int i, int j, int k, Real value);
+	Real getValue(int i, int j, int k);
+
+private:
+	// Attributes
+	int nx, ny, nz;
+	Real *T;
 };
 
 
@@ -29,8 +43,8 @@ public:
 	void drawObjects();
 
 	// Feel free to change the signature of these functions, add arguments, etc.
-	void diffuseTemperatureExplicit();
-	void diffuseTemperatureImplicit();
+	void diffuseTemperatureExplicit(int nx, int ny, int nz, Grid T, double alpha, double timestep);
+	void diffuseTemperatureImplicit(int nx, int ny, int nz, Grid T, double alpha, double timestep);
 
 private:
 	// Attributes
@@ -40,7 +54,14 @@ private:
 	Point2D m_mouse;
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
+	int nx, ny, nz;
+	float alpha;
+	float timestep;
 	Grid T;
+
+	// Helper Functions
+	void setupA(int nx, int ny, int nz, SparseMatrix<Real>& A, double factor);
+	void setupB(int nx, int ny, int nz, Grid T, std::vector<Real>& b);
 };
 
 #endif
