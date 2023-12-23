@@ -119,14 +119,8 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
 void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {
 	// solve A T = b
 
-	// This is just an example to show how to work with the PCG solver,
-	const int nx = 5;
-	const int ny = 5;
-	const int nz = 5;
-	const int N = nx * ny * nz;
-
-	SparseMatrix<Real> A(N);
-	std::vector<Real> b(N);
+	SparseMatrix<Real> A(T.n * T.m);
+	std::vector<Real> b(T.n * T.m);
 
 	// This is the part where you have to assemble the system matrix A and the right-hand side b!
 
