@@ -80,8 +80,8 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
 	//}
 
 	// central diff
-	for (int i = 1; i < gridWidth - 1; i++) {
-		for (int j = 1; j < gridHeight - 1; i++) {
+	for (int i = 2; i < gridWidth - 2; i++) {
+		for (int j = 2; j < gridHeight - 2; i++) {
 			float bigThing = (grid.grid.at(i + 1).at(j) - 2 * grid.grid.at(i).at(j) + grid.grid.at(i -1).at(j)) / (deltaX * deltaX)
 				+ (grid.grid.at(i).at(j + 1) - 2 * grid.grid.at(i).at(j) + grid.grid.at(i).at(j - 1)) / (deltaY * deltaY);
 			float nextValue = alpha * bigThing * 2 * timeStep + grid.grid.at(i).at(j);

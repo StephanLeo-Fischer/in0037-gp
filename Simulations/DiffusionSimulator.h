@@ -25,14 +25,15 @@ public:
 			v.resize(height);
 		}
 
-		srand((unsigned)time(0));
 		for (int i = 0; i < width; i++) {
-			vector<float> tmpVec;
-			grid.push_back(tmpVec);
+			//vector<float> tmpVec;
+			//grid.push_back(tmpVec);
 			for (int j = 0; j < height; j++) {
+				srand(i*j);  // not random but good enough for me
 				float r;
-				r = rand() / std::numeric_limits<int>::max();
-				grid.at(i).push_back(r);  // j mal 
+				r = rand() % 100;// / std::numeric_limits<int>::max();
+				grid.at(i).at(j) = r;  // j mal 
+				cout << r << endl;
 			}
 				
 		}
