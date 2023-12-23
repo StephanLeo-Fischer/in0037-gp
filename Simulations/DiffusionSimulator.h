@@ -31,18 +31,18 @@ public:
 			for (int j = 0; j < height; j++) {
 				srand(i*j);  // not random but good enough for me
 				float r;
-				r = rand() % 100;// / std::numeric_limits<int>::max();
+				r = rand() % 100 / 100.0f;// / std::numeric_limits<int>::max();
 				grid.at(i).at(j) = r;  // j mal 
 				cout << r << endl;
 			}
 				
 		}
 
-		for (int i = 0; i < width; i++) {
-			cout << endl;
-			for (int j = 0; j < height; j++)
-				cout << grid.at(i).at(j);
-		}
+		//for (int i = 0; i < width; i++) {
+		//	cout << endl;
+		//	for (int j = 0; j < height; j++)
+		//		cout << grid.at(i).at(j);
+		//}
 	}
 
 

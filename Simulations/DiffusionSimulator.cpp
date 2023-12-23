@@ -144,7 +144,7 @@ void DiffusionSimulator::simulateTimestep(float timeStep)
 
 void DiffusionSimulator::drawObjects()
 {
-	cout << "height" << gridHeight << "width" << gridWidth << endl;
+	//cout << "height" << gridHeight << "width" << gridWidth << endl;
 	//visualization
 	for (int idx_x = 0; idx_x < gridWidth; idx_x++) {
 		for (int idx_y = 0; idx_y < gridHeight; idx_y++) {
@@ -162,7 +162,7 @@ void DiffusionSimulator::drawObjects()
 				10,														// specular power
 				abs(grid.grid.at(idx_x).at(idx_y)) * Vec3(1, 1, 1));	// diffuse color
 			DUC->drawSphere(
-				0.1 * Vec3(idx_x - int(gridWidth / 2), idx_y - int(gridHeight / 2), 0),	// position
+				0.15 * Vec3(idx_x - int(gridWidth / 2), idx_y - int(gridHeight / 2), 0),	// position
 				0.1 * Vec3(1, 1, 1)															// scale
 			);
 		}
