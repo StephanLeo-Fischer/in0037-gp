@@ -13,6 +13,7 @@ DiffusionSimulator::DiffusionSimulator()
 
 	T.initValues();
 	diffusionConst = 1.0;
+	T.size = 5;
 }
 
 const char * DiffusionSimulator::getTestCasesStr(){
@@ -33,8 +34,9 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 	this->DUC = DUC;
 	// to be implemented
 
-	TwAddVarRW(DUC->g_pTweakBar, "Grid Size n", TW_TYPE_INT32, &T.newN, "min=1 step=1");
-	TwAddVarRW(DUC->g_pTweakBar, "Grid Size m", TW_TYPE_INT32, &T.newM, "min=1 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "Grid Size", TW_TYPE_FLOAT, &T.size, "min=1 step=0.1");
+	TwAddVarRW(DUC->g_pTweakBar, "Grid Scale n", TW_TYPE_INT32, &T.newN, "min=1 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "Grid Scale m", TW_TYPE_INT32, &T.newM, "min=1 step=1");
 	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Constant", TW_TYPE_FLOAT, &diffusionConst, "min=0.1 step=0.1 max=10.0");
 }
 
@@ -46,7 +48,6 @@ void DiffusionSimulator::notifyCaseChanged(int testCase)
 	//
 
 	T.initValues();
-	diffusionConst = 0.5;
 
 	switch (m_iTestCase)
 	{
@@ -98,18 +99,20 @@ void DiffusionSimulator::diffuseTemperatureExplicit(float timeStep) {
 
 
 
-				float value = (T.getValue(i + 1, j) - 2.0 * T.getValue(i, j) + T.getValue(i - 1, j));
-				value += (T.getValue(i, j + 1) - 2.0 * T.getValue(i, j) + T.getValue(i, j - 1));
+				float value = (T.getValue(i + 1, j) - 2.0 * T.getValue(i, j) + T.getValue(i - 1, j))/(T.xStep() * T.xStep());
+				value += (T.getValue(i, j + 1) - 2.0 * T.getValue(i, j) + T.getValue(i, j - 1))/(T.yStep() * T.yStep());
 				value *= diffusionConst * timeStep;
 
-				cout << "value at i=" << i << ", j=" << j << ":  " << value << endl;
-
-				T.setTemp(i, j, value);
+				T.setTemp(i, j, T.getTemp(i, j) + value);
 			}
 		}
 	}
 
-	T.values = T.temp;
+	for (int i = 0; i < T.n; i++) {
+		for (int j = 0; j < T.m; j++) {
+			T.setValue(i, j, T.getTemp(i, j));
+		}
+	}
 }
 
 
@@ -179,7 +182,7 @@ void DiffusionSimulator::drawObjects()
 				cout << " VALUE NOT IN RANGE AT i=" << i << ", j=" << j << endl;
 				break;
 			}
-			DUC->drawSphere(Vec3(i, T.getValue(i, j), j).toDirectXVector(), Vec3(0.1).toDirectXVector());
+			DUC->drawSphere(Vec3(i*T.xStep() - T.size/2, T.getValue(i, j), j*T.yStep() - T.size/2).toDirectXVector(), Vec3(0.1).toDirectXVector());
 		}
 	}
 }
@@ -187,7 +190,7 @@ void DiffusionSimulator::drawObjects()
 
 void DiffusionSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext)
 {
-	DUC->setUpLighting(Vec3(), Vec3(), 0, Vec3(1));
+	DUC->setUpLighting(Vec3(), Vec3(0.5), 0.5, Vec3(0.5));
 	drawObjects();
 }
 
@@ -231,6 +234,11 @@ void Grid::setValue(int i, int j, float value)
 	values.at(i).at(j) = value;
 }
 
+float Grid::getTemp(int i, int j)
+{
+	return temp.at(i).at(j);
+}
+
 void Grid::setTemp(int i, int j, float value)
 {
 	temp.at(i).at(j) = value;
@@ -264,4 +272,14 @@ bool Grid::valIsInRange(int i, int j)
 bool Grid::tempIsInRange(int i, int j)
 {
 	return i >= 0 && i < temp.size() && j >= 0 && j < temp.at(i).size();
+}
+
+float Grid::xStep()
+{
+	return size/(float)n;
+}
+
+float Grid::yStep()
+{
+	return size/(float)m;
 }

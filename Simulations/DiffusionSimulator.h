@@ -8,6 +8,8 @@ class Grid {
 public:
 	int n, m;
 	int newN, newM;
+
+	float size = 5;
 	vector<vector<float>> values;
 	vector<vector<float>> temp;
 
@@ -16,6 +18,7 @@ public:
 
 	float getValue(int i, int j);
 	void setValue(int i, int j, float value);
+	float getTemp(int i, int j);
 	void setTemp(int i, int j, float value);
 
 	void initValues();
@@ -23,6 +26,9 @@ public:
 
 	bool valIsInRange(int i, int j);
 	bool tempIsInRange(int i, int j);
+
+	float xStep();
+	float yStep();
 };
 
 
