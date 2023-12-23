@@ -123,6 +123,7 @@ void DiffusionSimulator::diffuseTemperatureImplicit(float timeStep) {
 	std::vector<Real> b(T.n * T.m);
 
 	// This is the part where you have to assemble the system matrix A and the right-hand side b!
+	
 
 	// perform solve
 	Real pcg_target_residual = 1e-05;
