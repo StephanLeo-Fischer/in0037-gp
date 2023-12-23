@@ -35,8 +35,8 @@ void DiffusionSimulator::initUI(DrawingUtilitiesClass * DUC)
 	// to be implemented
 
 	TwAddVarRW(DUC->g_pTweakBar, "Grid Size", TW_TYPE_FLOAT, &T.size, "min=1 step=0.1");
-	TwAddVarRW(DUC->g_pTweakBar, "Grid Scale n", TW_TYPE_INT32, &T.newN, "min=1 step=1");
-	TwAddVarRW(DUC->g_pTweakBar, "Grid Scale m", TW_TYPE_INT32, &T.newM, "min=1 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "Grid Scale n", TW_TYPE_INT32, &T.newN, "min=3 step=1");
+	TwAddVarRW(DUC->g_pTweakBar, "Grid Scale m", TW_TYPE_INT32, &T.newM, "min=3 step=1");
 	TwAddVarRW(DUC->g_pTweakBar, "Diffusion Constant", TW_TYPE_FLOAT, &diffusionConst, "min=0.1 step=0.1 max=10.0");
 }
 
