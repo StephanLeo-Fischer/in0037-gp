@@ -2,11 +2,15 @@
 #include "collisionDetect.h"
 
 #define RADIANS(deg) (deg * M_PI / 180)
+#define DEGREES(rad) (rad * 180 / M_PI)
 
-Rigidbody::Rigidbody(SimulationParameters * params, float mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
+// TODO: Delete this
+extern bool g_bSimulateByStep;
+
+Rigidbody::Rigidbody(SimulationParameters * params, double mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
 	Rigidbody(params, mass, position, Quat(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)), scale) {}
 
-Rigidbody::Rigidbody(SimulationParameters* params, float mass, Vec3 position, Quat rotation, Vec3 scale) :
+Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Quat rotation, Vec3 scale) :
 	m_pParams(params),
 	m_fMass(mass),
 	m_vPosition(position),
@@ -30,8 +34,11 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
 	DUC->drawRigidBody(m_mTransformMatrix);
 
+	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(1, 1, 0));
+	DUC->drawSphere(_DEBUG_CONTACT_POINT, Vec3(0.01));
+
 	// For debug:
-	if (debugLine != 0) {
+	if (true) {
 		const Vec3 red	 = Vec3(1, 0, 0);
 		const Vec3 green = Vec3(0, 1, 0);
 		const Vec3 blue  = Vec3(0, 0, 1);
@@ -51,11 +58,16 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 			break;
 		}
 
+		// TEST:
+		DUC->drawLine(m_vPosition, red, m_vPosition + right(), red);
+		DUC->drawLine(m_vPosition, green, m_vPosition + up(), green);
+		DUC->drawLine(m_vPosition, blue, m_vPosition + forward(), blue);
+
 		DUC->endLine();
 	}
 }
 
-void Rigidbody::timestepEuler(float timestep) {
+void Rigidbody::timestepEuler(double timestep) {
 	Quat w = Quat(m_vAngularVelocity.x, m_vAngularVelocity.y, m_vAngularVelocity.z, 0);
 	
 	m_vPosition += timestep * m_vLinearVelocity;
@@ -108,8 +120,8 @@ void Rigidbody::clearForces() {
 	this->m_vSumForces = 0;
 }
 
-float Rigidbody::getMass() const { return m_fMass; }
-void Rigidbody::setMass(float mass) {
+double Rigidbody::getMass() const { return m_fMass; }
+void Rigidbody::setMass(double mass) {
 	this->m_fMass = mass;
 	updateInertialTensors();
 }
@@ -176,7 +188,7 @@ Vec3 Rigidbody::getVelocityOfPoint(Vec3 position) const {
 	return m_vLinearVelocity + m_vAngularVelocity * (position - m_vPosition);
 }
 
-void Rigidbody::manageCollision(Rigidbody* other) {
+void Rigidbody::manageCollision(Rigidbody* other, bool correctPos) {
 
 	// If both rigidbodies are kinematic, ignore collisions:
 	if (m_bIsKinematic && other->m_bIsKinematic)
@@ -184,7 +196,7 @@ void Rigidbody::manageCollision(Rigidbody* other) {
 
 	// In this situation, this object is not kinematic, and the other is kinematic:
 	if (other->m_bIsKinematic) {
-		other->manageCollision(this);
+		other->manageCollision(this, correctPos);
 		return;
 	}
 
@@ -198,9 +210,10 @@ void Rigidbody::manageCollision(Rigidbody* other) {
 	CollisionInfo collision = checkCollisionSAT(transformA, transformB);
 
 	if (collision.isValid) {
+		color = other->color = Vec3(1, 0, 0);
 
 		// Compute the impulse to update both rigidbodies:
-		float c = m_pParams->collisionFactor;
+		double c = m_pParams->collisionFactor;
 
 		Vec3 position = collision.collisionPointWorld;
 		Vec3 n = collision.normalWorld;
@@ -218,35 +231,43 @@ void Rigidbody::manageCollision(Rigidbody* other) {
 
 		// First case: this object is kinematic (and the other one is not):
 		if (m_bIsKinematic) {
-			// Little improvement: update the position of the rigidbodies directly, to manage the
-			// situation when rigidbodies are just colliding with vrel = 0:
-			// other->m_vPosition -= collision.depth * n;
-
 			// If the collision was already managed, then return:
 			if (dot(vr, n) >= 0)
 				return;
 
 			// Ma -> +infinity, so invA = 0
-			float Mb = other->m_fMass;
+			double Mb = other->m_fMass;
 
 			Mat4 invIb = other->m_mCurrentInvInertialTensor;
 			Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
 
 			// Result of the impulse:
-			float J = -(1 + c) * dot(vr, n) / (1/Mb + dot(B, n));
+			double J = -(1 + c) * dot(vr, n) / (1/Mb + dot(B, n));
+			cout << "J: " << J << endl;
 
-			// Update the linear velocity of the other rigidbody:
-			other->m_vLinearVelocity = vb - J * n / Mb;
+			if (correctPos && J < 0.05f) {
+				// TEST:
+				this->updateTransformMatrices();
+				other->updateTransformMatrices();
+				other->correctPosition(&checkCollisionSAT(other->m_mTransformMatrix, this->m_mTransformMatrix));
+			}
+			else {
+				// Update the linear velocity of the other rigidbody:
+				other->m_vLinearVelocity = vb - J * n / Mb;
 
-			// Update the angular momentum and velocity of the other rigidbody:
-			other->m_vAngularMomentum = other->m_vAngularMomentum - cross(xb, J * n);
-			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
+				// Update the angular momentum and velocity of the other rigidbody:
+				other->m_vAngularMomentum = other->m_vAngularMomentum - cross(xb, J * n);
+				other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
+			}
+
+			_DEBUG_CONTACT_POINT = collision.collisionPointWorld;
+			g_bSimulateByStep = true;
 		}
 
 		// Second case: both objects aren't kinematic:
 		else {
-			float Ma = m_fMass;
-			float Mb = other->m_fMass;
+			double Ma = m_fMass;
+			double Mb = other->m_fMass;
 
 			// Little improvement: update the position of the rigidbodies directly, to manage the
 			// situation when rigidbodies are just colliding with vrel = 0:
@@ -264,8 +285,8 @@ void Rigidbody::manageCollision(Rigidbody* other) {
 			Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
 
 			// Result of the impulse:
-			float J = -(1 + c) * dot(vr, n) / (1/Ma + 1/Mb + dot(A + B, n));
-
+			double J = -(1 + c) * dot(vr, n) / (1/Ma + 1/Mb + dot(A + B, n));
+			
 			// Update va and vb for both rigidbodies:
 			this->m_vLinearVelocity = va + J * n / Ma;
 			other->m_vLinearVelocity = vb - J * n / Mb;
@@ -282,14 +303,117 @@ void Rigidbody::manageCollision(Rigidbody* other) {
 			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
 		}
 	}
+	else
+		color = other->color = Vec3(0.5);
+}
+
+// Correct directly the position and orientation of this rigidbody, using the collision info
+// with an other rigidbody that is supposed fixed, in order to prevent objects from 
+// intersecting each other.
+// This function should be called only when the impulse between the two rigidbodies is too
+// small (ex: a rigidbody staying on the ground)
+void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
+{
+	// Define the maximum allowed correction (to prevent the rigidbody from "teleporting"):
+	// const float MAX_ANGLE_CORRECTION = 1.0f;	// Degrees
+	// const float MAX_POS_CORRECTION = 0.01f;
+	_DEBUG_CONTACT_POINT = collisionInfo->collisionPointWorld;
+
+	if (m_bIsKinematic)
+		return;
+
+	float h = collisionInfo->depth;
+
+	Vec3 n1 = collisionInfo->normalWorld;		// Vector from fixed to this rigidbody
+	Vec3 n2 = getAxisAlong(&n1);
+	float rigidbodyHeight = norm(n2);		// Height of the rigidbody along n2
+	n2 /= rigidbodyHeight;
+
+	// This is the unit vector around which we have to turn
+	Vec3 k = cross(n2, n1);
+	float normK = norm(k);
+
+	if (normK > 1e-4) {		// if normK != 0
+		k /= normK;
+
+		// Vector from the rigidbody center to the collision point, without the part
+		// along the rotation axis k:
+		Vec3 OM = collisionInfo->collisionPointWorld - m_vPosition;
+		OM = OM - dot(OM, k) * k;
+
+		float dotOM_n1 = dot(OM, n1);
+
+		// Compute the maximum value for h, that can be corrected only by rotating the rigidbody:
+		float hMax = -rigidbodyHeight / 2 - dotOM_n1;
+
+		// If h > hMax, we can't prevent the intersection just by rotating the rigidbody.
+		// We need also to translate it.
+		if (h > hMax) {
+			// First align the rigidbody with the collision normal (this is the highest 
+			// possible correction just by rotation):
+			float alphaMax = acos(dot(n1, n2));
+			m_qRotation = (Quat(k, alphaMax) * m_qRotation).unit();
+
+			cout << "Correction angleMax: " << alphaMax << "; dot: " << dot(n1, n2) << "; Norm K: " << normK << "; Error: " << (errno == EDOM) <<  endl;
+
+			// Then, correct the remaining error by translating the rigidbody:
+			m_vPosition += (h - hMax) * n1;
+		}
+
+		// Else, we can correct the collision just with a rotation of the rigidbody:
+		else {
+			float normOM = norm(OM);
+			float alpha = acos(dotOM_n1 / normOM) - acos((h + dotOM_n1) / normOM);
+
+			if (dot(OM, cross(n1, k)) < 0)
+				alpha = -alpha;
+
+			cout << "Correction angle: " << alpha << endl;
+
+			m_qRotation = (Quat(k, alpha) * m_qRotation).unit();
+		}
+
+		// FOR TESTING:
+		// g_bSimulateByStep = true;
+	}
+	else {
+		// In this case, both rigidbodies are already aligned.
+		// We can only play on the position to prevent the intersection between the rigidbodies
+
+		m_vPosition += h * n1;
+	}
+
+	g_bSimulateByStep = true;
+	updateTransformMatrices();
+	updateCurrentInertialTensor();
+}
+
+void Rigidbody::computeCollisionInfo(Rigidbody* other)
+{
+	// return checkCollisionSAT(m_mTransformMatrix, other->m_mTransformMatrix);
+}
+
+// X-axis
+inline Vec3 Rigidbody::right() const {
+	return Vec3(m_mTransformMatrix.value[0][0], m_mTransformMatrix.value[0][1], m_mTransformMatrix.value[0][2]);
+}
+
+// Y-axis
+inline Vec3 Rigidbody::up() const {
+	return Vec3(m_mTransformMatrix.value[1][0], m_mTransformMatrix.value[1][1], m_mTransformMatrix.value[1][2]);
+}
+
+// Z-axis
+inline Vec3 Rigidbody::forward() const {
+	return Vec3(m_mTransformMatrix.value[2][0], m_mTransformMatrix.value[2][1], m_mTransformMatrix.value[2][2]);
 }
 
 void Rigidbody::updateInertialTensors()
 {
 	// Compute the initial inertial tensor and it's inverse:
-	float A = m_fMass * (m_vScale.y * m_vScale.y + m_vScale.z * m_vScale.z) / 12;
-	float B = m_fMass * (m_vScale.x * m_vScale.x + m_vScale.z * m_vScale.z) / 12;
-	float C = m_fMass * (m_vScale.x * m_vScale.x + m_vScale.y * m_vScale.y) / 12;
+	double A = m_fMass * (m_vScale.y * m_vScale.y + m_vScale.z * m_vScale.z) / 12;
+	double B = m_fMass * (m_vScale.x * m_vScale.x + m_vScale.z * m_vScale.z) / 12;
+	double C = m_fMass * (m_vScale.x * m_vScale.x + m_vScale.y * m_vScale.y) / 12;
 
 	this->m_mInertialTensor0 = Mat4(
 		A, 0, 0, 0,
@@ -364,4 +488,29 @@ Vec3 Rigidbody::computeTorque() {
 		sum += cross(torque.first - m_vPosition, torque.second);
 
 	return sum;
+}
+
+// Return the axis of the rigidbody that is the most aligned with the given vector:
+Vec3 Rigidbody::getAxisAlong(Vec3* vector) const
+{
+	Vec3 right = this->right();
+	Vec3 up = this->up();
+	Vec3 forward = this->forward();
+
+	float d1 = dot(right / norm(right), *vector);
+	float ad1 = abs(d1);
+
+	float d2 = dot(up / norm(up), *vector);
+	float ad2 = abs(d2);
+
+	float d3 = dot(forward / norm(forward), *vector);
+	float ad3 = abs(d3);
+
+	if (ad1 >= ad2 && ad1 >= ad3)
+		return d1 > 0 ? right : -right;
+	
+	else if (ad2 >= ad3)
+		return d2 > 0 ? up : -up;
+
+	return d3 > 0 ? forward : -forward;
 }

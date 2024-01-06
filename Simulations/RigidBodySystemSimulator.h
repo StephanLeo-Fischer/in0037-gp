@@ -3,8 +3,8 @@
 #include "Simulator.h"
 
 //add your header for your rigid body system, for e.g.,
-//#include "rigidBodySystem.h" 
 #include "Rigidbody.h"
+#include "collisionDetect.h"
 
 #define TESTCASEUSEDTORUNTEST 2
 
@@ -57,9 +57,9 @@ private:
 
 	// Set of parameters used for the simulation, that can be changed in the UI:
 	SimulationParameters m_SimulationParameters;
-	float m_fBoxSize = 1;
-	float m_fGravityForce = 10000;	// Only used for Demo Complex
+	
 	int m_iDebugLine = 0;
+	bool m_bEnablePositionCorrection = true;
 
 	// Used to generate random colors:
 	std::mt19937 eng;
@@ -69,9 +69,18 @@ private:
 	void setupDemoCollision();
 	void setupDemoComplex();
 	
-	void updateForces();
 	void manageCollisions();
+	void manageCollisions2();
 	void fireRigidbody();
-	void startExplosion();
+
+	// Define a structure that encapsulates a collision info, as well as the indices 
+	// of the rigidbodies that are colliding
+	struct Collision {
+		int i1, i2;						// Indices of the two rigidbodies that are colliding
+		CollisionInfo collisionInfo;	// Info about the collision
+
+		Collision(int i1, int i2, CollisionInfo collisionInfo) : 
+			i1(i1), i2(i2), collisionInfo(collisionInfo) {}
+	};
 };
 #endif

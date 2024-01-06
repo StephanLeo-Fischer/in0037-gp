@@ -39,18 +39,17 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		break;
 
 	case DEMO3_COLLISION:
-		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_FLOAT, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
 		break;
 
 	case DEMO4_COMPLEX:
-		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_FLOAT, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
-		TwAddVarRW(DUC->g_pTweakBar, "Linear friction", TW_TYPE_FLOAT, &m_SimulationParameters.linearFriction, "min=0 max=0.05 step=0.001");
-		TwAddVarRW(DUC->g_pTweakBar, "Angular friction", TW_TYPE_FLOAT, &m_SimulationParameters.angularFriction, "min=0 max=0.05 step=0.001");
-		TwAddVarRW(DUC->g_pTweakBar, "Gravity force", TW_TYPE_FLOAT, &m_fGravityForce, "min=1000 max=100000 step=1000");
-		TwAddButton(DUC->g_pTweakBar, "Fire Rigidbody", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->fireRigidbody(); }, nullptr, "");
-		TwAddVarRW(DUC->g_pTweakBar, "Box size", TW_TYPE_FLOAT, &m_fBoxSize, "min=0.5 max=5 step=0.1");
-		TwAddButton(DUC->g_pTweakBar, "Explosion", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->startExplosion(); }, nullptr, "");
+		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Linear friction", TW_TYPE_DOUBLE, &m_SimulationParameters.linearFriction, "min=0 max=0.05 step=0.001");
+		TwAddVarRW(DUC->g_pTweakBar, "Angular friction", TW_TYPE_DOUBLE, &m_SimulationParameters.angularFriction, "min=0 max=0.05 step=0.001");
+		TwAddVarRW(DUC->g_pTweakBar, "Correct position", TW_TYPE_BOOLCPP, &m_bEnablePositionCorrection, "");
 
+		TwAddButton(DUC->g_pTweakBar, "Fire Rigidbody", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->fireRigidbody(); }, nullptr, "");
+		
 		TwType TW_TYPE_METHOD;
 		TW_TYPE_METHOD = TwDefineEnumFromString("Debug lines", "None,Linear Velocity,Angular Velocity,Forces");
 		TwAddVarRW(DUC->g_pTweakBar, "Debug lines", TW_TYPE_METHOD, &m_iDebugLine, "");
@@ -133,7 +132,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 	case DEMO3_COLLISION:
 	case DEMO4_COMPLEX:
 		// Compute forces applied to the rigidbodies dynamically:
-		updateForces();
+		// updateForces();
 
 		for (Rigidbody& r : m_vRigidbodies)
 			r.timestepEuler(timestep);
@@ -272,129 +271,54 @@ void RigidBodySystemSimulator::setupDemoCollision()
 	m_vRigidbodies.push_back(plank);
 }
 
-void RigidBodySystemSimulator::setupDemoComplex()
-{
+void RigidBodySystemSimulator::setupDemoComplex() {
 	m_vRigidbodies.clear();
-	m_SimulationParameters.angularFriction = 0;
-	m_SimulationParameters.linearFriction = 0;
 
-	const Vec3 center = Vec3(0, 2, 0);
-	const float CENTER_BOX_SIZE = 1.5;
-	const float BOX_SIZE = 1;
-	const float BOX_SPACE = 2;	// Space between boxes
+	// Setup simulation parameters:
+	m_SimulationParameters.collisionFactor = 0.2;
+	m_SimulationParameters.angularFriction = 0.01;
+	m_SimulationParameters.linearFriction = 0.01;
+	g_fTimestep = 0.003;
 
-	Rigidbody centerBox = Rigidbody(&m_SimulationParameters,
-		CENTER_BOX_SIZE*CENTER_BOX_SIZE*CENTER_BOX_SIZE,		// mass
-		center,													// position
-		Vec3(0.0),												// rotation
-		Vec3(CENTER_BOX_SIZE));									// scale
-	centerBox.color = Vec3(1, 0.5, 0);
-	centerBox.setAngularVelocity(Vec3(10, 50, 30));
-	centerBox.setLinearVelocity(Vec3(0.1, 0, 0.1));
-	m_vRigidbodies.push_back(centerBox);
+	const float GROUND_POSITION = 0;
 
-	for (int i = 1; i <= 8; i++) {
-		float radius = i * BOX_SPACE;
+	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, GROUND_POSITION-0.5f, 0), Vec3(0, 0, 0), Vec3(10, 1, 10));
+	ground.color = Vec3(0.1);
+	ground.setKinematic(true);
 
-		Rigidbody box = Rigidbody(&m_SimulationParameters,
-			BOX_SIZE * BOX_SIZE * BOX_SIZE,		// mass
-			center + Vec3(radius, 0, 0),		// position
-			Vec3(0.0),							// rotation
-			Vec3(BOX_SIZE));					// scale
-		box.color = Vec3(0.5*randCol(eng), randCol(eng), 1);
-
-		// Set the velocity that should theoretically make the 
-		// box rotate in circles around the center (Kepler's Law):
-		box.setLinearVelocity(Vec3(0, 0, sqrt(m_fGravityForce / radius)));
-
-		m_vRigidbodies.push_back(box);
-	}
-}
-
-void RigidBodySystemSimulator::updateForces() {
-	if (m_iTestCase == DEMO4_COMPLEX) {
-		const Vec3 center = Vec3(0, 2, 0);
-		const float MAX_DISTANCE = 20;
-
-		for (Rigidbody& r : m_vRigidbodies) {
-			Vec3 n = center - r.getPosition();
-			float distance = norm(n);
-
-			if (distance == 0)
-				continue;
-
-			// Prevent any rigidbody from going too far from the center of the scene:
-			if (distance > MAX_DISTANCE) {
-				r.setPosition(center - MAX_DISTANCE * n / distance);
-				r.setLinearVelocity(Vec3(0.0));
-			}
-
-			float MAX_FORCE = 10000;
-			float MIN_FORCE = 10;
-
-			// Add a gravity force to the object:
-			float force = m_fGravityForce * r.getMass() / (distance * distance);
-			force = max(MIN_FORCE, min(force, MAX_FORCE));
-
-			// Apply the force to the rigidbody:
-			r.setForce(force * n / distance);
-		}
-	}
+	m_vRigidbodies.push_back(ground);
 }
 
 void RigidBodySystemSimulator::manageCollisions()
 {
 	for (int i = 0; i < m_vRigidbodies.size(); i++) {
-		for (int j = i+1; j < m_vRigidbodies.size(); j++) {
-
-			// Manage collision between rigidbodies i and j:
-			m_vRigidbodies[i].manageCollision(&m_vRigidbodies[j]);
+		for (int j = i + 1; j < m_vRigidbodies.size(); j++) {
+			m_vRigidbodies[i].manageCollision(&m_vRigidbodies[j], m_bEnablePositionCorrection);
 		}
 	}
+}
+
+void RigidBodySystemSimulator::manageCollisions2()
+{
+	// Find all the collisions between rigidbodies:
+	vector<Collision> collisions;
+	for (int i = 0; i < m_vRigidbodies.size(); i++) {
+		for (int j = i+1; j < m_vRigidbodies.size(); j++) {
+
+			//CollisionInfo collision = m_vRigidbodies[i].computeCollisionInfo(&m_vRigidbodies[j]);
+
+			//if (collision.isValid)
+			//	collisions.push_back(Collision(i, j, collision));
+		}
+	}
+
+	// Build the tree from the ground:
 }
 
 void RigidBodySystemSimulator::fireRigidbody()
 {
-	// Fire a cube in the scene, from the camera:
-	Mat4 worldView = Mat4(DUC->g_camera.GetWorldMatrix() * DUC->g_camera.GetViewMatrix());
-
-	// Position of the camera in world :
-	Vec3 inputWorld = worldView.inverse().transformVector(Vec3(0, 0, 0));
-
-	// Create a box at the position of the camera:
-	Rigidbody box = Rigidbody(&m_SimulationParameters, 
-		m_fBoxSize*m_fBoxSize*m_fBoxSize,	// mass
-		inputWorld,							// position (position of the camera)
-		Quat(worldView),					// rotation (rotation of the camera)
-		Vec3(m_fBoxSize));					// scale
-
-	box.color = Vec3(randCol(eng), randCol(eng), randCol(eng));
-
-	// Throw the box to the center of the scene:
-	box.setLinearVelocity(-20 * inputWorld / norm(inputWorld));
-
+	Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
+	box.setForce(Vec3(0, -GRAVITY_FACTOR, 0));
+	//box.setLinearVelocity(Vec3(0, -50, 0));
 	m_vRigidbodies.push_back(box);
-}
-
-void RigidBodySystemSimulator::startExplosion() {
-	if (m_iTestCase == DEMO4_COMPLEX) {
-		const Vec3 center = Vec3(0, 2, 0);
-
-		for (Rigidbody& r : m_vRigidbodies) {
-			Vec3 n = r.getPosition() - center;
-			float distance = norm(n);
-
-			if (distance == 0)
-				continue;
-
-			float EXPLOSION_FORCE = 1000;
-			float MAX_FORCE = 150;
-
-			// Add a gravity force to the object:
-			float force = min(EXPLOSION_FORCE / (distance * distance), MAX_FORCE);
-			
-			// Apply the force to the rigidbody:
-			r.setLinearVelocity(force * n / distance);
-		}
-	}
 }

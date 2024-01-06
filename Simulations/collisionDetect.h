@@ -1,4 +1,7 @@
-﻿// header file:
+﻿#ifndef COLLISION_DETECT_h
+#define COLLISION_DETECT_h
+
+// header file:
 #include <DirectXMath.h>
 #include <Vector>
 using namespace DirectX;
@@ -475,3 +478,5 @@ inline void testCheckCollision(int caseid){
 		// collision point : 0.000405, 0.000000, 0.000000
 	}
 }
+
+#endif    /* COLLISION_DETECT_h */

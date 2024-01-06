@@ -1,14 +1,15 @@
 #ifndef RIGIDBODY_h
 #define RIGIDBODY_h
 #include "Simulator.h"
+#include "collisionDetect.h"
 
 // Define a structure to put all the parameters describing the physics parameters of the rigidbody;
 struct SimulationParameters {
-	float collisionFactor;
+	double collisionFactor;
 
 	// Two factors added to avoid creating energy with the Euler integration method:
-	float linearFriction;
-	float angularFriction;
+	double linearFriction;
+	double angularFriction;
 };
 
 class Rigidbody {
@@ -17,14 +18,14 @@ public:
 	Vec3 color;
 
 	// Create a rigidbody with an orientation using Euler angles (in degrees):
-	Rigidbody(SimulationParameters* params, float mass, Vec3 position, Vec3 rotation, Vec3 scale);
+	Rigidbody(SimulationParameters* params, double mass, Vec3 position, Vec3 rotation, Vec3 scale);
 
 	// Create a rigidbody with an orientation defined with a quaternion:
-	Rigidbody(SimulationParameters* params, float mass, Vec3 position, Quat rotation, Vec3 scale);
+	Rigidbody(SimulationParameters* params, double mass, Vec3 position, Quat rotation, Vec3 scale);
 
 	void draw(DrawingUtilitiesClass * DUC, int debugLine) const;
 
-	void timestepEuler(float timestep);
+	void timestepEuler(double timestep);
 
 	void addTorque(Vec3 location, Vec3 force);
 	void addForce(Vec3 force);
@@ -32,8 +33,8 @@ public:
 	void clearForces();
 
 	// Add some getters and setters:
-	float getMass() const;
-	void setMass(float mass);
+	double getMass() const;
+	void setMass(double mass);
 
 	Vec3 getPosition() const;
 	void setPosition(Vec3 position);
@@ -59,7 +60,14 @@ public:
 	// Compute the velocity of the given position in global space, if it was part of the rigidbody:
 	Vec3 getVelocityOfPoint(Vec3 position) const;
 
-	void manageCollision(Rigidbody* other);
+	void manageCollision(Rigidbody* other, bool correctPos);
+	void correctPosition(CollisionInfo* collisionInfo);
+	void computeCollisionInfo(Rigidbody* other);
+
+	// Return the local axes of the rigidbody:
+	inline Vec3 right() const;			// X-axis
+	inline Vec3 up() const;				// Y-axis
+	inline Vec3 forward() const;		// Z-axis
 
 private:
 	void updateTransformMatrices();		// We need to call this when we update the position, rotation or scale of the rigidbody
@@ -70,10 +78,14 @@ private:
 	Mat4 computeCurrentInvInertialTensor() const;
 	Vec3 computeTorque();
 
+	// Return the axis between -up(), up(), -right(), right(), -forward() and forward() with
+	// the highest dot product with the given vector
+	Vec3 getAxisAlong(Vec3* vector) const;
+
 	// Pointer to a set of parameters for the simulation
 	SimulationParameters * m_pParams;
 
-	float m_fMass;
+	double m_fMass;
 
 	Vec3 m_vPosition;
 	Quat m_qRotation;
@@ -95,6 +107,9 @@ private:
 	Mat4 m_mCurrentInvInertialTensor;	// R*inv(I)*inv(R)
 
 	Vec3 m_vAngularMomentum;
+
+	// TODO: Delete this:
+	Vec3 _DEBUG_CONTACT_POINT = 0.0;
 
 	Vec3 m_vSumForces;						// Sum of the forces applied to this Rigidbody
 	vector<pair<Vec3, Vec3>> m_vTorques;	// All the torques (position, force) applied to this Rigidbody
