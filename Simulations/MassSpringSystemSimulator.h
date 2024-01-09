@@ -32,7 +32,7 @@ public:
 	void setDampingFactor(float damping);
 	int addMassPoint(Vec3 position, Vec3 velocity, bool isFixed);
 	void addSpring(int masspoint1, int masspoint2);
-	void addSpring(int masspoint1, int masspoint2, float initialLength);
+	void addSpring(int masspoint1, int masspoint2, float initialLength);  // how to add springs to rbs?
 	int getNumberOfMassPoints();
 	int getNumberOfSprings();
 	Vec3 getPositionOfMassPoint(int index);

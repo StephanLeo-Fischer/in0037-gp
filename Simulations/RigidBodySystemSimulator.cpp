@@ -297,18 +297,20 @@ void RigidBodySystemSimulator::setupDemoCollision()  // goal: flummi
 	ground.color = Vec3(0.1);
 	ground.setKinematic(true);
 	
+	float circleSize = 1.5f;
 	int circlePartsAmount = 7;
 	for (int i = 0; i < circlePartsAmount; i++) {
-		float curX = cos(2 * M_PI * i / (float)circlePartsAmount );
-		float curY = sin(2 * M_PI * i / (float)circlePartsAmount);
+		float curX = cos(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
+		float curY = sin(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
 
 		Rigidbody circlePart = Rigidbody(&m_SimulationParameters, 
 			1, // mass
-			Vec3(curX, curY + 3, 0),  // pos
+			Vec3(curX, curY + 3, 0),  // pos   // the +3 is just for some initial falling height. can be adjusted
 			Vec3(0, 0, 0),  // rot
 			Vec3(0.5, 0.5, 0.5));  // scale
 		circlePart.color = Vec3(0.6, 0.27, 0.03);
 		circlePart.setForce(Vec3(0, -GRAVITY_FACTOR, 0));
+		
 		//circlePart.setLinearVelocity(Vec3(0, -0.2, 0));
 		m_vRigidbodies.push_back(circlePart);
 
