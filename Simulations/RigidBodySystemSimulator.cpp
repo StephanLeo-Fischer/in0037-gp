@@ -85,6 +85,7 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 	switch (m_iTestCase)
 	{
 	case DEMO1_ONESTEP:
+		/*  // go instantly to collision demo (quicker testing)
 		cout << "Switch to Demo1: One-step !" << endl;
 		setupDemoSingleBody();
 
@@ -98,12 +99,13 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 		velocity = m_vRigidbodies[0].getVelocityOfPoint(Vec3(0.3, 0.5, 0.25));
 		cout << "World space velocity of point (0.3, 0.5, 0.25): " << velocity << endl;
 		break;
-
+		*/
 	case DEMO2_SINGLE_BODY:
+		/*  // go instantly to collision demo (quicker testing)
 		cout << "Switch to Demo2: Single body !" << endl;
 		setupDemoSingleBody();
 		break;
-
+		*/
 	case DEMO3_COLLISION:
 		cout << "Switch to Demo3: Collision between two rigidbodies !" <<endl;
 		setupDemoCollision();
@@ -281,7 +283,7 @@ void RigidBodySystemSimulator::setupDemoSingleBody()
 	m_vRigidbodies.push_back(r);
 }
 
-void RigidBodySystemSimulator::setupDemoCollision()
+void RigidBodySystemSimulator::setupDemoCollision()  // goal: flummi
 {
 	m_vRigidbodies.clear();
 
@@ -293,15 +295,26 @@ void RigidBodySystemSimulator::setupDemoCollision()
 
 	Rigidbody ground = Rigidbody(&m_SimulationParameters, 100, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 1, 10));
 	ground.color = Vec3(0.1);
-	//ground.setKinematic(true);
+	ground.setKinematic(true);
 	
-	Rigidbody plank = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 0, 0), Vec3(0, 0, 20), Vec3(2, 0.1, 0.01));
-	plank.color = Vec3(0.6, 0.27, 0.03);
-	//plank.setForce(Vec3(0, -GRAVITY_FACTOR, 0));  // "Gravity forces may not be used for Demos 1 to 3 [...]" ~Recommendations & Tips
-	plank.setLinearVelocity(Vec3(0, -0.2, 0));
+	int circlePartsAmount = 7;
+	for (int i = 0; i < circlePartsAmount; i++) {
+		float curX = cos(2 * M_PI * i / (float)circlePartsAmount );
+		float curY = sin(2 * M_PI * i / (float)circlePartsAmount);
 
+		Rigidbody circlePart = Rigidbody(&m_SimulationParameters, 
+			1, // mass
+			Vec3(curX, curY + 3, 0),  // pos
+			Vec3(0, 0, 0),  // rot
+			Vec3(0.5, 0.5, 0.5));  // scale
+		circlePart.color = Vec3(0.6, 0.27, 0.03);
+		circlePart.setForce(Vec3(0, -GRAVITY_FACTOR, 0));
+		//circlePart.setLinearVelocity(Vec3(0, -0.2, 0));
+		m_vRigidbodies.push_back(circlePart);
+
+		std::cout << "rb mit" << curX << endl;
+	}
 	m_vRigidbodies.push_back(ground);
-	m_vRigidbodies.push_back(plank);
 }
 
 void RigidBodySystemSimulator::setupDemoComplex()
