@@ -16,6 +16,7 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 	m_SimulationParameters.collisionFactor = 1;
 	m_SimulationParameters.linearFriction = 0;		// Disable linear friction
 	m_SimulationParameters.angularFriction = 0;		// Disable angular friction
+	m_SimulationParameters.minimumImpulse = 0.05;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -47,6 +48,8 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Linear friction", TW_TYPE_DOUBLE, &m_SimulationParameters.linearFriction, "min=0 max=0.05 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Angular friction", TW_TYPE_DOUBLE, &m_SimulationParameters.angularFriction, "min=0 max=0.05 step=0.001");
+		TwAddVarRW(DUC->g_pTweakBar, "Minimum impulse", TW_TYPE_DOUBLE, &m_SimulationParameters.minimumImpulse, "min=0 step=0.01");
+
 		TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "min=0");
 
 		TwAddVarRW(DUC->g_pTweakBar, "Correct position", TW_TYPE_BOOLCPP, &m_bEnablePositionCorrection, "");
@@ -286,8 +289,8 @@ void RigidBodySystemSimulator::setupDemoComplex() {
 
 	// Setup simulation parameters:
 	m_SimulationParameters.collisionFactor = 0.2;
-	m_SimulationParameters.angularFriction = 0.01;
-	m_SimulationParameters.linearFriction = 0.01;
+	m_SimulationParameters.angularFriction = 0.008;
+	m_SimulationParameters.linearFriction = 0.008;
 	g_fTimestep = 0.003;
 
 	const float GROUND_POSITION = 0;
@@ -303,7 +306,23 @@ void RigidBodySystemSimulator::manageCollisions()
 {
 	for (int i = 0; i < m_vRigidbodies.size(); i++) {
 		for (int j = i + 1; j < m_vRigidbodies.size(); j++) {
-			m_vRigidbodies[i].manageCollision(&m_vRigidbodies[j], m_bEnablePositionCorrection);
+			CollisionInfo collision = Rigidbody::computeCollision(&m_vRigidbodies[i], &m_vRigidbodies[j]);
+
+			if (collision.isValid) {
+				float J = Rigidbody::computeImpulse(&m_vRigidbodies[i], &m_vRigidbodies[j], &m_SimulationParameters,
+							collision.collisionPointWorld, collision.normalWorld, collision.depth);
+
+				if (J < m_SimulationParameters.minimumImpulse && m_bEnablePositionCorrection) {
+					if (!m_vRigidbodies[i].isKinematic() && !m_vRigidbodies[j].isKinematic())
+						Rigidbody::correctPosition(&m_vRigidbodies[i], &m_vRigidbodies[j], collision.collisionPointWorld, -collision.normalWorld, collision.depth);
+
+					else if (!m_vRigidbodies[i].isKinematic())
+						Rigidbody::correctPosition(&m_vRigidbodies[i], collision.collisionPointWorld, collision.normalWorld, collision.depth, true);
+					
+					else if (!m_vRigidbodies[j].isKinematic())
+						Rigidbody::correctPosition(&m_vRigidbodies[j], collision.collisionPointWorld, -collision.normalWorld, collision.depth, true);
+				}
+			}
 		}
 	}
 }

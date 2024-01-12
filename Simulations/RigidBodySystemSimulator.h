@@ -58,7 +58,7 @@ private:
 	
 	int m_iDebugLine = 0;
 	bool m_bEnablePositionCorrection = true;
-	float m_fGravity = 6;
+	float m_fGravity = 9.81f;
 
 	// Used to generate random colors:
 	std::mt19937 eng;

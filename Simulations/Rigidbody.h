@@ -10,6 +10,9 @@ struct SimulationParameters {
 	// Two factors added to avoid creating energy with the Euler integration method:
 	double linearFriction;
 	double angularFriction;
+
+	// If the impulse is lower than this value, we ignore it and use the position correction instead:
+	double minimumImpulse;
 };
 
 class Rigidbody {
@@ -60,14 +63,25 @@ public:
 	// Compute the velocity of the given position in global space, if it was part of the rigidbody:
 	Vec3 getVelocityOfPoint(Vec3 position) const;
 
-	void manageCollision(Rigidbody* other, bool correctPos);
-	void correctPosition(CollisionInfo* collisionInfo);
-	void computeCollisionInfo(Rigidbody* other);
-
 	// Return the local axes of the rigidbody:
 	inline Vec3 right() const;			// X-axis
 	inline Vec3 up() const;				// Y-axis
 	inline Vec3 forward() const;		// Z-axis
+
+	static CollisionInfo computeCollision(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB);
+
+	// Compute and return the impulse between two rigidbodies:
+	static double computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, const SimulationParameters* params, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth);
+
+	// Correct the position of the given rigidbody, given the collision info with another rigidbody that is supposed 
+	// to be fixed. We can use this function when the impulse between two rigidbodies is small (i.e. collision with ground)
+	// The collisionNormal should be from the fixed rigidbody to the given rigidbody:
+	static void correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth, bool stabilize);
+
+	// Correct the position of both rigidbodies, given the collision info between them.
+	// We can use this function when the impulse between the rigidbodies is small.
+	// The collision normal should be from A to B:
+	static void correctPosition(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth);
 
 private:
 	void updateTransformMatrices();		// We need to call this when we update the position, rotation or scale of the rigidbody
@@ -111,4 +125,5 @@ private:
 	Vec3 m_vSumForces;						// Sum of the forces applied to this Rigidbody
 	vector<pair<Vec3, Vec3>> m_vTorques;	// All the torques (position, force) applied to this Rigidbody
 };
+
 #endif
