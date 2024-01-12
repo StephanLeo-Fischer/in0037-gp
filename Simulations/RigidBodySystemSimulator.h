@@ -14,9 +14,6 @@
 #define DEMO3_COLLISION 2
 #define DEMO4_COMPLEX 3
 
-#define GRAVITY_FACTOR 6
-
-
 class RigidBodySystemSimulator:public Simulator {
 public:
 	// Construtors
@@ -61,6 +58,7 @@ private:
 	
 	int m_iDebugLine = 0;
 	bool m_bEnablePositionCorrection = true;
+	float m_fGravity = 6;
 
 	// Used to generate random colors:
 	std::mt19937 eng;

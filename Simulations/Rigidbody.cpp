@@ -24,7 +24,7 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 	color(0.2) {
 
 	updateTransformMatrices();
-	updateInertialTensors();
+	updateInertiaTensors();
 
 	clearForces();
 }
@@ -49,6 +49,9 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 		DUC->drawLine(m_vPosition, green, m_vPosition + m_vAngularVelocity, green);
 		break;
 	case 3:
+		DUC->drawLine(m_vPosition, blue, m_vPosition + m_vAngularMomentum, blue);
+		break;
+	case 4:
 		DUC->drawLine(m_vPosition, blue, m_vPosition + m_vSumForces, blue);
 		break;
 	}
@@ -79,9 +82,11 @@ void Rigidbody::timestepEuler(double timestep) {
 		m_vLinearVelocity *= (1 - m_pParams->linearFriction);
 		m_vAngularMomentum *= (1 - m_pParams->angularFriction);
 
-		// Update the current inertial tensor, and use it to update the angular velocity:
-		m_mCurrentInvInertialTensor = computeCurrentInvInertialTensor();
-		m_vAngularVelocity = m_mCurrentInvInertialTensor.transformVector(m_vAngularMomentum);
+		// Update the current inertia tensor, and use it to update the angular velocity:
+		m_mCurrentInvInertiaTensor = computeCurrentInvInertiaTensor();
+		m_vAngularVelocity = m_mCurrentInvInertiaTensor.transformVector(m_vAngularMomentum);
+
+		cout << "Mass: " << m_fMass << "; Angular momentum : " << norm(m_vAngularMomentum) << "; Angular velocity : " << norm(m_vAngularVelocity) << endl;
 	}
 }
 
@@ -117,7 +122,7 @@ void Rigidbody::clearForces() {
 double Rigidbody::getMass() const { return m_fMass; }
 void Rigidbody::setMass(double mass) {
 	this->m_fMass = mass;
-	updateInertialTensors();
+	updateInertiaTensors();
 }
 
 Vec3 Rigidbody::getPosition() const { return m_vPosition; }
@@ -133,14 +138,14 @@ void Rigidbody::setRotation(Vec3 rotation) {
 void Rigidbody::setRotation(Quat rotation) { 
 	this->m_qRotation = rotation;
 	updateTransformMatrices();
-	updateCurrentInertialTensor();
+	updateCurrentInertiaTensor();
 }
 
 Vec3 Rigidbody::getScale() const { return m_vScale; }
 void Rigidbody::setScale(Vec3 scale) { 
 	this->m_vScale = scale;
 	updateTransformMatrices();
-	updateInertialTensors();
+	updateInertiaTensors();
 }
 
 void Rigidbody::setParams(SimulationParameters* params) { this->m_pParams = params; }
@@ -150,15 +155,15 @@ void Rigidbody::setKinematic(boolean isKinematic) {
 
 	if (isKinematic) {
 		// If the object is kinematic, ignore the forces applied to it:
-		m_mCurrentInvInertialTensor = 0;
+		m_mCurrentInvInertiaTensor = 0;
 		m_vAngularMomentum = 0;
 		clearForces();
 	}
 	else {
-		// Else, update the current inertial tensor and angular momentum of the rigidbody,
+		// Else, update the current inertia tensor and angular momentum of the rigidbody,
 		// based on it's orientation and angular speed:
-		m_mCurrentInvInertialTensor = computeCurrentInertialTensor();
-		m_vAngularMomentum = computeCurrentInertialTensor().transformVector(m_vAngularVelocity);
+		m_mCurrentInvInertiaTensor = computeCurrentInertiaTensor();
+		m_vAngularMomentum = computeCurrentInertiaTensor().transformVector(m_vAngularVelocity);
 	}
 }
 boolean Rigidbody::isKinematic() const { return m_bIsKinematic; }
@@ -175,7 +180,7 @@ void Rigidbody::setAngularVelocity(Vec3 angularVelocity) {
 	// If the rigidbody is not kinematic, update it's angular momentum, since we changed 
 	// it's angular velocity:
 	if(!m_bIsKinematic)
-		this->m_vAngularMomentum = computeCurrentInertialTensor().transformVector(angularVelocity);
+		this->m_vAngularMomentum = computeCurrentInertiaTensor().transformVector(angularVelocity);
 }
 
 Vec3 Rigidbody::getVelocityOfPoint(Vec3 position) const {
@@ -230,12 +235,12 @@ void Rigidbody::manageCollision(Rigidbody* other, bool correctPos) {
 			// Ma -> +infinity, so invA = 0
 			double Mb = other->m_fMass;
 
-			Mat4 invIb = other->m_mCurrentInvInertialTensor;
+			Mat4 invIb = other->m_mCurrentInvInertiaTensor;
 			Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
 
 			// Result of the impulse:
 			double J = -(1 + c) * dot(vr, n) / (1/Mb + dot(B, n));
-			cout << "J: " << J << "; ";
+			//cout << "J: " << J << "; ";
 
 			if (correctPos && J < 0.05f) {
 				// TODO: Avoid the recomputation of the collision:
@@ -265,8 +270,8 @@ void Rigidbody::manageCollision(Rigidbody* other, bool correctPos) {
 			if (dot(vr, n) >= 0)
 				return;
 
-			Mat4 invIa = m_mCurrentInvInertialTensor;
-			Mat4 invIb = other->m_mCurrentInvInertialTensor;
+			Mat4 invIa = m_mCurrentInvInertiaTensor;
+			Mat4 invIb = other->m_mCurrentInvInertiaTensor;
 
 			Vec3 A = cross(invIa.transformVector(cross(xa, n)), xa);
 			Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
@@ -297,27 +302,27 @@ void Rigidbody::manageCollision(Rigidbody* other, bool correctPos) {
 // intersecting each other.
 // This function should be called only when the impulse between the two rigidbodies is too
 // small (ex: a rigidbody staying on the ground)
-void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
-{
-	// Define the maximum allowed correction (to prevent the rigidbody from "teleporting"):
-	// const float MAX_ANGLE_CORRECTION = 1.0f;	// Degrees
-	// const float MAX_POS_CORRECTION = 0.01f;
-
+void Rigidbody::correctPosition(CollisionInfo* collisionInfo) {
 	if (m_bIsKinematic)
 		return;
 
-	// Test: remove energy from the rigidbody:
-	m_vLinearVelocity *= 0.01f;
-	m_vAngularMomentum *= 0.01f;
-
 	double h = collisionInfo->depth;
-	cout << "Collision depth: " << h << "; ";
 
 	Vec3 n1 = collisionInfo->normalWorld;		// Vector from fixed to this rigidbody
 	Vec3 n2 = getAxisAlong(&n1);
-	double rigidbodyHeight = norm(n2);		// Height of the rigidbody along n2
+	double rigidbodyHeight = norm(n2);			// Height of the rigidbody along n2
 	n2 /= rigidbodyHeight;
 
+	// Get the part of the linear velocity along the normal, and orthogonal to the normal,
+	// and multiply the part along the normal by 0.1 to simulate friction:
+	Vec3 velocityAlongNormal = dot(m_vLinearVelocity, n1) * n1;
+	m_vLinearVelocity = 0.1f * velocityAlongNormal + (m_vLinearVelocity - velocityAlongNormal);
+	
+	// For the angular velocity, this is the opposite: the object can rotate around the normal, but has
+	// friction along the other axes:
+	velocityAlongNormal = dot(m_vAngularVelocity, n1) * n1;
+	m_vAngularVelocity = velocityAlongNormal + 0.1f * (m_vAngularVelocity - velocityAlongNormal);
+	
 	// This is the unit vector around which we have to turn
 	Vec3 k = cross(n2, n1);
 	double normK = norm(k);
@@ -328,7 +333,6 @@ void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
 	// correct the intersection:
 	if (abs(dot_n1_n2 - 1) < 1e-5) {
 		m_vPosition += h * n1;
-		cout << "Correction h: " << h << endl;
 	}
 
 	// Else, we have to rotate the rigidbody first, in order to minimize the collision depth. 
@@ -355,8 +359,6 @@ void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
 
 			m_qRotation = (Quat(k, alphaMax) * m_qRotation).unit();
 
-			cout << "Correction angleMax: " << alphaMax << "; Correction h: " << h - hMax << "; Error: " << (errno == EDOM) << endl;
-
 			// Then, correct the remaining error by translating the rigidbody:
 			m_vPosition += (h - hMax) * n1;
 		}
@@ -369,14 +371,12 @@ void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
 			if (dot(OM, cross(n1, k)) < 0)
 				alpha = -alpha;
 
-			cout << "Correction angle: " << alpha << endl;
-
 			m_qRotation = (Quat(k, alpha) * m_qRotation).unit();
 		}
 	}
 
 	updateTransformMatrices();
-	updateCurrentInertialTensor();
+	updateCurrentInertiaTensor();
 }
 
 void Rigidbody::computeCollisionInfo(Rigidbody* other)
@@ -399,59 +399,59 @@ inline Vec3 Rigidbody::forward() const {
 	return Vec3(m_mTransformMatrix.value[2][0], m_mTransformMatrix.value[2][1], m_mTransformMatrix.value[2][2]);
 }
 
-void Rigidbody::updateInertialTensors()
+void Rigidbody::updateInertiaTensors()
 {
-	// Compute the initial inertial tensor and it's inverse:
+	// Compute the initial inertia tensor and it's inverse:
 	double A = m_fMass * (m_vScale.y * m_vScale.y + m_vScale.z * m_vScale.z) / 12;
 	double B = m_fMass * (m_vScale.x * m_vScale.x + m_vScale.z * m_vScale.z) / 12;
 	double C = m_fMass * (m_vScale.x * m_vScale.x + m_vScale.y * m_vScale.y) / 12;
 
-	this->m_mInertialTensor0 = Mat4(
+	this->m_mInertiaTensor0 = Mat4(
 		A, 0, 0, 0,
 		0, B, 0, 0,
 		0, 0, C, 0,
 		0, 0, 0, 1
 	);
 
-	this->m_mInvInertialTensor0 = Mat4(
+	this->m_mInvInertiaTensor0 = Mat4(
 		1.0/A,	0,		0,		0,
 		0,		1.0/B,	0,		0,
 		0,		0,		1.0/C,	0,
 		0,		0,		0,		1
 	);
 
-	updateCurrentInertialTensor();
+	updateCurrentInertiaTensor();
 }
 
-void Rigidbody::updateCurrentInertialTensor()
+void Rigidbody::updateCurrentInertiaTensor()
 {
-	// If the rigidbody is kinematic, the inverse of it's inertial tensor is null, and thus 
+	// If the rigidbody is kinematic, the inverse of it's inertia tensor is null, and thus 
 	// it's angular momentum is also null, so we can ignore this:
 	if (!m_bIsKinematic) {
-		// Update the current inertial tensor of the rigidbody, depending on it's orientation:
-		this->m_mCurrentInvInertialTensor = computeCurrentInvInertialTensor();
+		// Update the current inertia tensor of the rigidbody, depending on it's orientation:
+		this->m_mCurrentInvInertiaTensor = computeCurrentInvInertiaTensor();
 
-		// Update the angular momentum, since we changed the inertial tensor of the rigidbody:
-		this->m_vAngularMomentum = computeCurrentInertialTensor().transformVector(m_vAngularVelocity);
+		// Update the angular momentum, since we changed the inertia tensor of the rigidbody:
+		this->m_vAngularMomentum = computeCurrentInertiaTensor().transformVector(m_vAngularVelocity);
 	}
 }
 
 // This should be called only if the rigidbody is not kinematic:
-Mat4 Rigidbody::computeCurrentInertialTensor() const {
+Mat4 Rigidbody::computeCurrentInertiaTensor() const {
 	Mat4 invRotMat = m_mRotMat;
 	invRotMat.transpose();
 
-	// return m_mRotMat * m_mInertialTensor0 * invRotMat;
-	return invRotMat * m_mInertialTensor0 * m_mRotMat;
+	// return m_mRotMat * m_mInertiaTensor0 * invRotMat;
+	return invRotMat * m_mInertiaTensor0 * m_mRotMat;
 }
 
 // This should be called only if the rigidbody is not kinematic:
-Mat4 Rigidbody::computeCurrentInvInertialTensor() const {
+Mat4 Rigidbody::computeCurrentInvInertiaTensor() const {
 	Mat4 invRotMat = m_mRotMat;
 	invRotMat.transpose();
 
-	//return m_mRotMat * m_mInvInertialTensor0 * invRotMat;
-	return invRotMat * m_mInvInertialTensor0 * m_mRotMat;
+	//return m_mRotMat * m_mInvInertiaTensor0 * invRotMat;
+	return invRotMat * m_mInvInertiaTensor0 * m_mRotMat;
 }
 
 void Rigidbody::updateTransformMatrices()

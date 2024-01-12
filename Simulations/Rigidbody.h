@@ -71,11 +71,11 @@ public:
 
 private:
 	void updateTransformMatrices();		// We need to call this when we update the position, rotation or scale of the rigidbody
-	void updateInertialTensors();		// We need to call this when we update the mass or the scale of the rigidbody
-	void updateCurrentInertialTensor();	// We need to call this when we changed the rotation of the rigidbody
+	void updateInertiaTensors();		// We need to call this when we update the mass or the scale of the rigidbody
+	void updateCurrentInertiaTensor();	// We need to call this when we changed the rotation of the rigidbody
 	
-	Mat4 computeCurrentInertialTensor() const;
-	Mat4 computeCurrentInvInertialTensor() const;
+	Mat4 computeCurrentInertiaTensor() const;
+	Mat4 computeCurrentInvInertiaTensor() const;
 	Vec3 computeTorque();
 
 	// Return the axis between -up(), up(), -right(), right(), -forward() and forward() with
@@ -101,10 +101,10 @@ private:
 	Mat4 m_mRotMat;
 	Mat4 m_mTransformMatrix;	// scaleMat * rotMat * translatMat
 
-	// Initial inertial tensor of the rigidbody, as well as it's inverse:
-	Mat4 m_mInertialTensor0;
-	Mat4 m_mInvInertialTensor0;
-	Mat4 m_mCurrentInvInertialTensor;	// R*inv(I)*inv(R)
+	// Initial inertia tensor of the rigidbody, as well as it's inverse:
+	Mat4 m_mInertiaTensor0;
+	Mat4 m_mInvInertiaTensor0;
+	Mat4 m_mCurrentInvInertiaTensor;	// R*inv(I)*inv(R)
 
 	Vec3 m_vAngularMomentum;
 
