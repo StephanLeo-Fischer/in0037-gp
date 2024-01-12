@@ -23,7 +23,8 @@ const char* RigidBodySystemSimulator::getTestCasesStr() {
 		"Demo1: One-step,"
 		"Demo2: Single-body,"
 		"Demo3: Collision,"
-		"Demo4: Complex,";
+		"Demo4: Complex,"
+		"Demo5: Collision debug,";
 }
 
 // Called when we reset the scene, or change the test case:
@@ -67,10 +68,16 @@ void RigidBodySystemSimulator::reset() {
 }
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext) {
-	// Draw all the rigidbodies:
-	for (auto& r : m_vRigidbodies)
-		r.draw(DUC, m_iDebugLine);
 
+	if (m_iTestCase == 4) {
+		collisionDebugger.draw(DUC);
+	}
+	else {
+		// Draw all the rigidbodies:
+		for (auto& r : m_vRigidbodies)
+			r.draw(DUC, m_iDebugLine);
+	}
+	
 	Sleep(1);
 }
 
@@ -112,7 +119,8 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 		break;
 
 	default:
-		cout << "Empty test !" << endl;
+		cout << "Collision debugger !" << endl;
+		m_vRigidbodies.clear();
 		break;
 	}
 }
@@ -317,7 +325,7 @@ void RigidBodySystemSimulator::manageCollisions2()
 
 void RigidBodySystemSimulator::fireRigidbody()
 {
-	Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
+	Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
 	box.setForce(Vec3(0, -GRAVITY_FACTOR, 0));
 	//box.setLinearVelocity(Vec3(0, -50, 0));
 	m_vRigidbodies.push_back(box);

@@ -34,37 +34,31 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
 	DUC->drawRigidBody(m_mTransformMatrix);
 
-	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, Vec3(1, 1, 0));
-	DUC->drawSphere(_DEBUG_CONTACT_POINT, Vec3(0.01));
-
 	// For debug:
-	if (true) {
-		const Vec3 red	 = Vec3(1, 0, 0);
-		const Vec3 green = Vec3(0, 1, 0);
-		const Vec3 blue  = Vec3(0, 0, 1);
+	const Vec3 red	 = Vec3(1, 0, 0);
+	const Vec3 green = Vec3(0, 1, 0);
+	const Vec3 blue  = Vec3(0, 0, 1);
 
+	DUC->beginLine();
 
-		DUC->beginLine();
-
-		switch (debugLine) {
-		case 1:
-			DUC->drawLine(m_vPosition, red, m_vPosition + m_vLinearVelocity, red);
-			break;
-		case 2:
-			DUC->drawLine(m_vPosition, green, m_vPosition + m_vAngularVelocity, green);
-			break;
-		case 3:
-			DUC->drawLine(m_vPosition, blue, m_vPosition + m_vSumForces, blue);
-			break;
-		}
-
-		// TEST:
-		DUC->drawLine(m_vPosition, red, m_vPosition + right(), red);
-		DUC->drawLine(m_vPosition, green, m_vPosition + up(), green);
-		DUC->drawLine(m_vPosition, blue, m_vPosition + forward(), blue);
-
-		DUC->endLine();
+	switch (debugLine) {
+	case 1:
+		DUC->drawLine(m_vPosition, red, m_vPosition + m_vLinearVelocity, red);
+		break;
+	case 2:
+		DUC->drawLine(m_vPosition, green, m_vPosition + m_vAngularVelocity, green);
+		break;
+	case 3:
+		DUC->drawLine(m_vPosition, blue, m_vPosition + m_vSumForces, blue);
+		break;
 	}
+
+	// TEST:
+	DUC->drawLine(m_vPosition, red, m_vPosition + right(), red);
+	DUC->drawLine(m_vPosition, green, m_vPosition + up(), green);
+	DUC->drawLine(m_vPosition, blue, m_vPosition + forward(), blue);
+
+	DUC->endLine();
 }
 
 void Rigidbody::timestepEuler(double timestep) {
@@ -210,8 +204,6 @@ void Rigidbody::manageCollision(Rigidbody* other, bool correctPos) {
 	CollisionInfo collision = checkCollisionSAT(transformA, transformB);
 
 	if (collision.isValid) {
-		color = other->color = Vec3(1, 0, 0);
-
 		// Compute the impulse to update both rigidbodies:
 		double c = m_pParams->collisionFactor;
 
@@ -243,12 +235,10 @@ void Rigidbody::manageCollision(Rigidbody* other, bool correctPos) {
 
 			// Result of the impulse:
 			double J = -(1 + c) * dot(vr, n) / (1/Mb + dot(B, n));
-			cout << "J: " << J << endl;
+			cout << "J: " << J << "; ";
 
 			if (correctPos && J < 0.05f) {
-				// TEST:
-				this->updateTransformMatrices();
-				other->updateTransformMatrices();
+				// TODO: Avoid the recomputation of the collision:
 				other->correctPosition(&checkCollisionSAT(other->m_mTransformMatrix, this->m_mTransformMatrix));
 			}
 			else {
@@ -259,9 +249,6 @@ void Rigidbody::manageCollision(Rigidbody* other, bool correctPos) {
 				other->m_vAngularMomentum = other->m_vAngularMomentum - cross(xb, J * n);
 				other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
 			}
-
-			_DEBUG_CONTACT_POINT = collision.collisionPointWorld;
-			g_bSimulateByStep = true;
 		}
 
 		// Second case: both objects aren't kinematic:
@@ -303,8 +290,6 @@ void Rigidbody::manageCollision(Rigidbody* other, bool correctPos) {
 			other->m_vAngularVelocity = invIb.transformVector(other->m_vAngularMomentum);
 		}
 	}
-	else
-		color = other->color = Vec3(0.5);
 }
 
 // Correct directly the position and orientation of this rigidbody, using the collision info
@@ -317,23 +302,38 @@ void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
 	// Define the maximum allowed correction (to prevent the rigidbody from "teleporting"):
 	// const float MAX_ANGLE_CORRECTION = 1.0f;	// Degrees
 	// const float MAX_POS_CORRECTION = 0.01f;
-	_DEBUG_CONTACT_POINT = collisionInfo->collisionPointWorld;
 
 	if (m_bIsKinematic)
 		return;
 
-	float h = collisionInfo->depth;
+	// Test: remove energy from the rigidbody:
+	m_vLinearVelocity *= 0.01f;
+	m_vAngularMomentum *= 0.01f;
+
+	double h = collisionInfo->depth;
+	cout << "Collision depth: " << h << "; ";
 
 	Vec3 n1 = collisionInfo->normalWorld;		// Vector from fixed to this rigidbody
 	Vec3 n2 = getAxisAlong(&n1);
-	float rigidbodyHeight = norm(n2);		// Height of the rigidbody along n2
+	double rigidbodyHeight = norm(n2);		// Height of the rigidbody along n2
 	n2 /= rigidbodyHeight;
 
 	// This is the unit vector around which we have to turn
 	Vec3 k = cross(n2, n1);
-	float normK = norm(k);
+	double normK = norm(k);
 
-	if (normK > 1e-4) {		// if normK != 0
+	double dot_n1_n2 = dot(n1, n2);
+
+	// If n1 and n2 are already aligned, we can only play on the position of the rigidbodies to
+	// correct the intersection:
+	if (abs(dot_n1_n2 - 1) < 1e-5) {
+		m_vPosition += h * n1;
+		cout << "Correction h: " << h << endl;
+	}
+
+	// Else, we have to rotate the rigidbody first, in order to minimize the collision depth. 
+	// We can then correct the remaining error by translating the rigidbody:
+	else {
 		k /= normK;
 
 		// Vector from the rigidbody center to the collision point, without the part
@@ -341,20 +341,21 @@ void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
 		Vec3 OM = collisionInfo->collisionPointWorld - m_vPosition;
 		OM = OM - dot(OM, k) * k;
 
-		float dotOM_n1 = dot(OM, n1);
+		double dot_OM_n1 = dot(OM, n1);
 
 		// Compute the maximum value for h, that can be corrected only by rotating the rigidbody:
-		float hMax = -rigidbodyHeight / 2 - dotOM_n1;
+		double hMax = -rigidbodyHeight / 2 - dot_OM_n1;
 
 		// If h > hMax, we can't prevent the intersection just by rotating the rigidbody.
 		// We need also to translate it.
 		if (h > hMax) {
 			// First align the rigidbody with the collision normal (this is the highest 
 			// possible correction just by rotation):
-			float alphaMax = acos(dot(n1, n2));
+			double alphaMax = acos(dot_n1_n2);
+
 			m_qRotation = (Quat(k, alphaMax) * m_qRotation).unit();
 
-			cout << "Correction angleMax: " << alphaMax << "; dot: " << dot(n1, n2) << "; Norm K: " << normK << "; Error: " << (errno == EDOM) <<  endl;
+			cout << "Correction angleMax: " << alphaMax << "; Correction h: " << h - hMax << "; Error: " << (errno == EDOM) << endl;
 
 			// Then, correct the remaining error by translating the rigidbody:
 			m_vPosition += (h - hMax) * n1;
@@ -362,8 +363,8 @@ void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
 
 		// Else, we can correct the collision just with a rotation of the rigidbody:
 		else {
-			float normOM = norm(OM);
-			float alpha = acos(dotOM_n1 / normOM) - acos((h + dotOM_n1) / normOM);
+			double normOM = norm(OM);
+			double alpha = acos(dot_OM_n1 / normOM) - acos((h + dot_OM_n1) / normOM);
 
 			if (dot(OM, cross(n1, k)) < 0)
 				alpha = -alpha;
@@ -372,18 +373,8 @@ void Rigidbody::correctPosition(CollisionInfo* collisionInfo)
 
 			m_qRotation = (Quat(k, alpha) * m_qRotation).unit();
 		}
-
-		// FOR TESTING:
-		// g_bSimulateByStep = true;
-	}
-	else {
-		// In this case, both rigidbodies are already aligned.
-		// We can only play on the position to prevent the intersection between the rigidbodies
-
-		m_vPosition += h * n1;
 	}
 
-	g_bSimulateByStep = true;
 	updateTransformMatrices();
 	updateCurrentInertialTensor();
 }

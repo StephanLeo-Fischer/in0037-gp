@@ -51,7 +51,7 @@ namespace collisionTools{
 
 	}
 
-	// Get Corners
+	// Get the corners of the object in world space
 	inline std::vector<XMVECTOR> getCorners(const XMMATRIX& obj2World)
 	{
 		const XMVECTOR centerWorld = XMVector3Transform(XMVectorZero(), obj2World);
@@ -162,7 +162,8 @@ namespace collisionTools{
 
 	inline bool overlap(Projection p1, Projection p2)
 	{
-		return !((p1.max > p2.max && p1.min > p2.max) || (p2.max > p1.max && p2.min > p1.max));
+		// return !((p1.max > p2.max && p1.min > p2.max) || (p2.max > p1.max && p2.min > p1.max));
+		return p1.min <= p2.max && p2.min <= p1.max;
 	}
 
 	inline float getOverlap(Projection p1, Projection p2)
@@ -172,10 +173,10 @@ namespace collisionTools{
 
 	static inline XMVECTOR contactPoint(
 		const XMVECTOR &pOne,
-		const XMVECTOR &dOne,
+		const XMVECTOR &dOne,	// axis1
 		float oneSize,
 		const XMVECTOR &pTwo,
-		const XMVECTOR &dTwo,
+		const XMVECTOR &dTwo,	// axis2
 		float twoSize,
 
 		// If this is true, and the contact point is outside
@@ -187,8 +188,8 @@ namespace collisionTools{
 		float dpStaOne, dpStaTwo, dpOneTwo, smOne, smTwo;
 		float denom, mua, mub;
 
-		smOne = XMVectorGetX(XMVector3LengthSq(dOne));
-		smTwo = XMVectorGetX(XMVector3LengthSq(dTwo));
+		smOne = XMVectorGetX(XMVector3LengthSq(dOne));	// dOne is a normal vector
+		smTwo = XMVectorGetX(XMVector3LengthSq(dTwo));	// dTwo is a normal vector
 		dpOneTwo = XMVectorGetX(XMVector3Dot(dTwo, dOne));
 
 		toSt = pOne - pTwo;
@@ -340,6 +341,7 @@ namespace collisionTools{
 				   {
 					   normal = normal * -1.0f;
 				   }
+
 				   collisionPoint = handleVertexToface(obj2World_B, toCenter);
 		}break;
 		case 1:{
@@ -348,6 +350,7 @@ namespace collisionTools{
 				   {
 					   normal = normal * -1.0f;
 				   }
+
 				   collisionPoint = handleVertexToface(obj2World_A, toCenter*-1);
 		}break;
 		case 2:{
@@ -387,6 +390,153 @@ namespace collisionTools{
 		info.normalWorld = normal*-1;
 		return info;
 	}
+
+	// Personal implementation of the collision detection:
+	inline CollisionInfo checkCollisionSATHelperCorrected(const XMMATRIX& obj2World_A, const XMMATRIX& obj2World_B, XMVECTOR size_A, XMVECTOR size_B)
+	{
+		CollisionInfo info;
+		info.isValid = false;
+		XMVECTOR collisionPoint = XMVectorZero();
+		float smallOverlap = 10000.0f;
+		XMVECTOR axis;
+		int index;
+		int fromWhere = -1;
+		bool bestSingleAxis = false;
+		XMVECTOR toCenter = getVectorConnnectingCenters(obj2World_A, obj2World_B);
+		std::vector<XMVECTOR> axes1 = getAxisNormalToFaces(obj2World_A);
+		std::vector<XMVECTOR> axes2 = getAxisNormalToFaces(obj2World_B);
+		std::vector<XMVECTOR> axes3 = getPairOfEdges(obj2World_A, obj2World_B);
+		// loop over the axes1
+		for (int i = 0; i < axes1.size(); i++) {
+			// project both shapes onto the axis
+			Projection p1 = project(obj2World_A, axes1[i]);
+			Projection p2 = project(obj2World_B, axes1[i]);
+			// do the projections overlap?
+			if (!overlap(p1, p2)) {
+				// then we can guarantee that the shapes do not overlap
+				return info;
+			}
+			else {
+				// get the overlap
+				float o = getOverlap(p1, p2);
+				// check for minimum
+				if (o < smallOverlap) {
+					// then set this one as the smallest
+					smallOverlap = o;
+					axis = axes1[i];
+					index = i;
+					fromWhere = 0;
+				}
+			}
+		}
+		// loop over the axes2
+		for (int i = 0; i < axes2.size(); i++) {
+			// project both shapes onto the axis
+			Projection p1 = project(obj2World_A, axes2[i]);
+			Projection p2 = project(obj2World_B, axes2[i]);
+			// do the projections overlap?
+			if (!overlap(p1, p2)) {
+				// then we can guarantee that the shapes do not overlap
+				return  info;
+			}
+			else {
+				// get the overlap
+				float o = getOverlap(p1, p2);
+				// check for minimum
+				if (o < smallOverlap) {
+					// then set this one as the smallest
+					smallOverlap = o;
+					axis = axes2[i];
+					index = i;
+					fromWhere = 1;
+					bestSingleAxis = true;
+				}
+			}
+		}
+		int whichEdges = 0;
+		// loop over the axes3
+		for (int i = 0; i < axes3.size(); i++) {
+			// project both shapes onto the axis
+			Projection p1 = project(obj2World_A, axes3[i]);
+			Projection p2 = project(obj2World_B, axes3[i]);
+			// do the projections overlap?
+			if (!overlap(p1, p2)) {
+				// then we can guarantee that the shapes do not overlap
+				return info;
+			}
+			else {
+				// get the overlap
+				float o = getOverlap(p1, p2);
+				// check for minimum
+				if (o < smallOverlap) {
+					// then set this one as the smallest
+					smallOverlap = o;
+					axis = axes3[i];
+					index = i;
+					whichEdges = i;
+					fromWhere = 2;
+				}
+			}
+		}
+		// if we get here then we know that every axis had overlap on it
+		// so we can guarantee an intersection
+		XMVECTOR normal;
+		switch (fromWhere) {
+		case 0: {
+			normal = axis;
+			if (XMVectorGetX(XMVector3Dot(axis, toCenter)) <= 0)
+			{
+				normal = normal * -1.0f;
+			}
+
+			collisionPoint = handleVertexToface(obj2World_B, normal);
+		}break;
+		case 1: {
+			normal = axis;
+			if (XMVectorGetX(XMVector3Dot(axis, toCenter)) <= 0)
+			{
+				normal = normal * -1.0f;
+			}
+
+			collisionPoint = handleVertexToface(obj2World_A, normal * -1);
+		}break;
+		case 2: {
+			XMVECTOR axis = XMVector3Normalize(XMVector3Cross(axes1[whichEdges / 3], axes2[whichEdges % 3]));
+			normal = axis;
+			if (XMVectorGetX(XMVector3Dot(axis, toCenter)) <= 0)
+			{
+				normal = normal * -1.0f;
+			}
+			XMVECTOR ptOnOneEdge = XMVectorSet(0.5, 0.5, 0.5, 1);
+			XMVECTOR ptOnTwoEdge = XMVectorSet(0.5, 0.5, 0.5, 1);
+
+			for (int i = 0; i < 3; i++)
+			{
+				if (i == whichEdges / 3) ptOnOneEdge = XMVectorSetByIndex(ptOnOneEdge, 0, i);
+				else if (XMVectorGetX(XMVector3Dot(axes1[i], normal)) < 0) ptOnOneEdge = XMVectorSetByIndex(ptOnOneEdge, -XMVectorGetByIndex(ptOnOneEdge, i), i);
+
+				if (i == whichEdges % 3) ptOnTwoEdge = XMVectorSetByIndex(ptOnTwoEdge, 0, i);
+				else if (XMVectorGetX(XMVector3Dot(axes2[i], normal)) > 0) ptOnTwoEdge = XMVectorSetByIndex(ptOnTwoEdge, -XMVectorGetByIndex(ptOnTwoEdge, i), i);
+			}
+			ptOnOneEdge = XMVector3Transform(ptOnOneEdge, obj2World_A);
+			ptOnTwoEdge = XMVector3Transform(ptOnTwoEdge, obj2World_B);
+			collisionPoint = contactPoint(ptOnOneEdge,
+				axes1[whichEdges / 3],
+				(float)XMVectorGetByIndex(size_A, (whichEdges / 3)),
+				ptOnTwoEdge,
+				axes2[whichEdges % 3],
+				XMVectorGetByIndex(size_B, (whichEdges % 3)),
+				bestSingleAxis);
+		}break;
+		}
+
+
+		info.isValid = true;
+		info.collisionPointWorld = collisionPoint;
+		info.depth = smallOverlap;
+		info.normalWorld = normal * -1;
+		return info;
+	}
 }
 
 /* params:
@@ -399,7 +549,7 @@ inline CollisionInfo checkCollisionSAT(GamePhysics::Mat4& obj2World_A, GamePhysi
 	XMVECTOR calSizeA = getBoxSize(MatA);
 	XMVECTOR calSizeB = getBoxSize(MatB);
 	
-	return checkCollisionSATHelper(MatA, MatB, calSizeA, calSizeB);
+	return checkCollisionSATHelperCorrected(MatA, MatB, calSizeA, calSizeB);
 }
 
 // example of using the checkCollisionSAT function

@@ -226,6 +226,7 @@
   <ItemGroup>
     <ClCompile Include="..\SimulatorTester\PublicMassSpringSystemTests.cpp" />
     <ClCompile Include="..\SimulatorTester\PublicRigidBodiesTests.cpp" />
+    <ClCompile Include="CollisionDebugger.h" />
     <ClCompile Include="Rigidbody.cpp" />
     <ClCompile Include="RigidBodySystemSimulator.cpp" />
     <ClCompile Include="TemplateSimulator.cpp" />

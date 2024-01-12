@@ -108,9 +108,6 @@ private:
 
 	Vec3 m_vAngularMomentum;
 
-	// TODO: Delete this:
-	Vec3 _DEBUG_CONTACT_POINT = 0.0;
-
 	Vec3 m_vSumForces;						// Sum of the forces applied to this Rigidbody
 	vector<pair<Vec3, Vec3>> m_vTorques;	// All the torques (position, force) applied to this Rigidbody
 };

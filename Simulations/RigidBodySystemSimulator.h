@@ -5,6 +5,7 @@
 //add your header for your rigid body system, for e.g.,
 #include "Rigidbody.h"
 #include "collisionDetect.h"
+#include "CollisionDebugger.h"
 
 #define TESTCASEUSEDTORUNTEST 2
 
@@ -64,6 +65,9 @@ private:
 	// Used to generate random colors:
 	std::mt19937 eng;
 	std::uniform_real_distribution<float> randCol;
+
+	// TODO: Delete this (used for debug):
+	CollisionDebugger collisionDebugger;
 
 	void setupDemoSingleBody();
 	void setupDemoCollision();
