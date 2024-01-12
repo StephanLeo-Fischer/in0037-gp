@@ -270,7 +270,7 @@ void RigidBodySystemSimulator::setupDemoCollision()
 	m_SimulationParameters.collisionFactor = 0.9;
 	m_SimulationParameters.angularFriction = 0;
 	m_SimulationParameters.linearFriction = 0;
-	g_fTimestep = 0.003;
+	g_fTimestep = 0.003f;
 
 	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 1, 10));
 	ground.color = Vec3(0.1);
@@ -291,7 +291,7 @@ void RigidBodySystemSimulator::setupDemoComplex() {
 	m_SimulationParameters.collisionFactor = 0.2;
 	m_SimulationParameters.angularFriction = 0.008;
 	m_SimulationParameters.linearFriction = 0.008;
-	g_fTimestep = 0.003;
+	g_fTimestep = 0.003f;
 
 	const float GROUND_POSITION = 0;
 
@@ -309,7 +309,7 @@ void RigidBodySystemSimulator::manageCollisions()
 			CollisionInfo collision = Rigidbody::computeCollision(&m_vRigidbodies[i], &m_vRigidbodies[j]);
 
 			if (collision.isValid) {
-				float J = Rigidbody::computeImpulse(&m_vRigidbodies[i], &m_vRigidbodies[j], &m_SimulationParameters,
+				double J = Rigidbody::computeImpulse(&m_vRigidbodies[i], &m_vRigidbodies[j], &m_SimulationParameters,
 							collision.collisionPointWorld, collision.normalWorld, collision.depth);
 
 				if (J < m_SimulationParameters.minimumImpulse && m_bEnablePositionCorrection) {
@@ -325,23 +325,6 @@ void RigidBodySystemSimulator::manageCollisions()
 			}
 		}
 	}
-}
-
-void RigidBodySystemSimulator::manageCollisions2()
-{
-	// Find all the collisions between rigidbodies:
-	vector<Collision> collisions;
-	for (int i = 0; i < m_vRigidbodies.size(); i++) {
-		for (int j = i+1; j < m_vRigidbodies.size(); j++) {
-
-			//CollisionInfo collision = m_vRigidbodies[i].computeCollisionInfo(&m_vRigidbodies[j]);
-
-			//if (collision.isValid)
-			//	collisions.push_back(Collision(i, j, collision));
-		}
-	}
-
-	// Build the tree from the ground:
 }
 
 void RigidBodySystemSimulator::fireRigidbody()

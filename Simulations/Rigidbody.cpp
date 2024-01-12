@@ -4,9 +4,6 @@
 #define RADIANS(deg) (deg * M_PI / 180)
 #define DEGREES(rad) (rad * 180 / M_PI)
 
-// TODO: Delete this
-extern bool g_bSimulateByStep;
-
 Rigidbody::Rigidbody(SimulationParameters * params, double mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
 	Rigidbody(params, mass, position, Quat(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)), scale) {}
 
@@ -16,6 +13,7 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 	m_vPosition(position),
 	m_qRotation(rotation),
 	m_vScale(scale.x, scale.y, scale.z),
+	m_fBoundingSphereRadius(max(max(scale.x, scale.y), scale.z)),
 
 	m_bIsKinematic(false),
 
@@ -142,6 +140,8 @@ void Rigidbody::setRotation(Quat rotation) {
 Vec3 Rigidbody::getScale() const { return m_vScale; }
 void Rigidbody::setScale(Vec3 scale) { 
 	this->m_vScale = scale;
+	this->m_fBoundingSphereRadius = max(max(scale.x, scale.y), scale.z);
+
 	updateTransformMatrices();
 	updateInertiaTensors();
 }
@@ -251,7 +251,6 @@ Mat4 Rigidbody::computeCurrentInvInertiaTensor() const {
 	Mat4 invRotMat = m_mRotMat;
 	invRotMat.transpose();
 
-	//return m_mRotMat * m_mInvInertiaTensor0 * invRotMat;
 	return invRotMat * m_mInvInertiaTensor0 * m_mRotMat;
 }
 
@@ -289,14 +288,14 @@ Vec3 Rigidbody::getAxisAlong(Vec3* vector) const
 	Vec3 up = this->up();
 	Vec3 forward = this->forward();
 
-	float d1 = dot(right / norm(right), *vector);
-	float ad1 = abs(d1);
+	double d1 = dot(right / norm(right), *vector);
+	double ad1 = abs(d1);
 
-	float d2 = dot(up / norm(up), *vector);
-	float ad2 = abs(d2);
+	double d2 = dot(up / norm(up), *vector);
+	double ad2 = abs(d2);
 
-	float d3 = dot(forward / norm(forward), *vector);
-	float ad3 = abs(d3);
+	double d3 = dot(forward / norm(forward), *vector);
+	double ad3 = abs(d3);
 
 	if (ad1 >= ad2 && ad1 >= ad3)
 		return d1 > 0 ? right : -right;
@@ -308,6 +307,16 @@ Vec3 Rigidbody::getAxisAlong(Vec3* vector) const
 }
 
 CollisionInfo Rigidbody::computeCollision(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB) {
+	
+	// First check if the bounding spheres of the rigidbodies are colliding: if not, we know that there is no collision:
+	double sumRadius = rigidbodyA->m_fBoundingSphereRadius + rigidbodyB->m_fBoundingSphereRadius;
+	if (normNoSqrt(rigidbodyA->m_vPosition - rigidbodyB->m_vPosition) > sumRadius * sumRadius) {
+		CollisionInfo collision;
+		collision.isValid = false;
+
+		return collision;
+	}
+	
 	return checkCollisionSAT(rigidbodyA->m_mTransformMatrix, rigidbodyB->m_mTransformMatrix);
 }
 

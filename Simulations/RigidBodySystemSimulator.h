@@ -72,7 +72,6 @@ private:
 	void setupDemoComplex();
 	
 	void manageCollisions();
-	void manageCollisions2();
 	void fireRigidbody();
 
 	// Define a structure that encapsulates a collision info, as well as the indices 

@@ -105,6 +105,9 @@ private:
 	Quat m_qRotation;
 	Vec3 m_vScale;
 
+	// Used for collision detection: this is just max(m_vScale):
+	double m_fBoundingSphereRadius;
+
 	// If the rigidbody is kinematic, it behaves like if it had an infinite mass:
 	boolean m_bIsKinematic;
 
