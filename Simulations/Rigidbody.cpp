@@ -16,6 +16,7 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 	m_fBoundingSphereRadius(max(max(scale.x, scale.y), scale.z)),
 
 	m_bIsKinematic(false),
+	m_bIsIdle(false),
 
 	m_vLinearVelocity(0.0),
 	m_vAngularVelocity(0.0),
@@ -29,7 +30,7 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 
 void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 {
-	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
+	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, m_bIsIdle ? Vec3(1, 0, 0) : color);
 	DUC->drawRigidBody(m_mTransformMatrix);
 
 	// For debug:
@@ -63,6 +64,11 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 }
 
 void Rigidbody::timestepEuler(double timestep) {
+	if (m_bIsKinematic || m_bIsIdle)
+		return;
+
+	frameCounterNotIdle++;
+
 	Quat w = Quat(m_vAngularVelocity.x, m_vAngularVelocity.y, m_vAngularVelocity.z, 0);
 	
 	m_vPosition += timestep * m_vLinearVelocity;
@@ -71,19 +77,17 @@ void Rigidbody::timestepEuler(double timestep) {
 	// Update the rotation and transformation matrices, since we changed the rotation and position of the rigidbody:
 	updateTransformMatrices();
 
-	if (!m_bIsKinematic) {
-		// Update the linear velocity, and angular momentum:
-		m_vLinearVelocity += timestep * m_vSumForces / m_fMass;
-		m_vAngularMomentum += timestep * computeTorque();
+	// Update the linear velocity, and angular momentum:
+	m_vLinearVelocity += timestep * m_vSumForces / m_fMass;
+	m_vAngularMomentum += timestep * computeTorque();
 
-		// Add friction to the linear velocity and angular momentum, to prevent the Euler method from creating energy:
-		m_vLinearVelocity *= (1 - m_pParams->linearFriction);
-		m_vAngularMomentum *= (1 - m_pParams->angularFriction);
+	// Add friction to the linear velocity and angular momentum, to prevent the Euler method from creating energy:
+	m_vLinearVelocity *= (1 - m_pParams->linearFriction);
+	m_vAngularMomentum *= (1 - m_pParams->angularFriction);
 
-		// Update the current inertia tensor, and use it to update the angular velocity:
-		m_mCurrentInvInertiaTensor = computeCurrentInvInertiaTensor();
-		m_vAngularVelocity = m_mCurrentInvInertiaTensor.transformVector(m_vAngularMomentum);
-	}
+	// Update the current inertia tensor, and use it to update the angular velocity:
+	m_mCurrentInvInertiaTensor = computeCurrentInvInertiaTensor();
+	m_vAngularVelocity = m_mCurrentInvInertiaTensor.transformVector(m_vAngularMomentum);
 }
 
 void Rigidbody::addTorque(Vec3 location, Vec3 force) {
@@ -113,6 +117,10 @@ void Rigidbody::setForce(Vec3 force) {
 void Rigidbody::clearForces() {
 	this->m_vTorques.clear();
 	this->m_vSumForces = 0;
+}
+
+void Rigidbody::addCollider(Rigidbody* rigidbody) {
+	m_vCurrColliders.push_back(rigidbody);
 }
 
 double Rigidbody::getMass() const { return m_fMass; }
@@ -148,13 +156,17 @@ void Rigidbody::setScale(Vec3 scale) {
 
 void Rigidbody::setParams(SimulationParameters* params) { this->m_pParams = params; }
 
-void Rigidbody::setKinematic(boolean isKinematic) { 
-	this->m_bIsKinematic = true;
+void Rigidbody::setKinematic(bool isKinematic) { 
+	this->m_bIsKinematic = isKinematic;
+	this->m_bIsIdle = isKinematic;
 
 	if (isKinematic) {
-		// If the object is kinematic, ignore the forces applied to it:
+		// If the object is kinematic, ignore the forces applied to it, and set 
+		// its velocity to zero:
 		m_mCurrentInvInertiaTensor = 0;
 		m_vAngularMomentum = 0;
+		m_vLinearVelocity = 0;
+		m_vAngularVelocity = 0;
 		clearForces();
 	}
 	else {
@@ -164,7 +176,31 @@ void Rigidbody::setKinematic(boolean isKinematic) {
 		m_vAngularMomentum = computeCurrentInertiaTensor().transformVector(m_vAngularVelocity);
 	}
 }
-boolean Rigidbody::isKinematic() const { return m_bIsKinematic; }
+bool Rigidbody::isKinematic() const { return m_bIsKinematic; }
+
+bool Rigidbody::isIdle() const { return m_bIsIdle; }
+
+void Rigidbody::allowIdleState()
+{
+	if (frameCounterNotIdle > 2)
+		m_bIsIdle = true;
+}
+
+void Rigidbody::setIdleState(bool isIdle)
+{
+	// Kinematic objects are always in idle state, and shouldn't be affected by this function
+	// For non kinematic object, changing their idle state will also change the state of all
+	// the rigidbodies colliding this object:
+	if (!m_bIsKinematic && isIdle != m_bIsIdle) {
+		m_bIsIdle = isIdle;
+
+		if (!isIdle)
+			frameCounterNotIdle = 0;
+
+		for (auto& r : m_vCurrColliders)
+			r->setIdleState(isIdle);
+	}
+}
 
 Vec3 Rigidbody::getLinearVelocity() const { return m_vLinearVelocity; }
 void Rigidbody::setLinearVelocity(Vec3 linearVelocity) { 
@@ -198,6 +234,37 @@ inline Vec3 Rigidbody::up() const {
 // Z-axis
 inline Vec3 Rigidbody::forward() const {
 	return Vec3(m_mTransformMatrix.value[2][0], m_mTransformMatrix.value[2][1], m_mTransformMatrix.value[2][2]);
+}
+
+// A rigidbody can stay in idle state only if all the rigidbodies colliding it are also in idle state.
+// The rigidbody also looses immediately this state if the set of colliding objects has changed
+// since the last frame:
+void Rigidbody::checkIdleState()
+{
+	// As soon as one colliding object is not in idle state, this object also looses its idle state.
+	// If we are already not in idle state, there is nothing to do:
+	if (m_bIsIdle) {
+		for (int i = 0; i < m_vCurrColliders.size(); i++) {
+			if (!m_vCurrColliders[i]->m_bIsIdle) {
+				setIdleState(false);
+				break;
+			}
+		}
+
+		// We also loose the idle state if the set of colliders has changed:
+		if (m_vCurrColliders.size() != m_vPrevColliders.size())
+			setIdleState(false);
+		else {
+			sort(m_vPrevColliders.begin(), m_vPrevColliders.end());
+			sort(m_vCurrColliders.begin(), m_vCurrColliders.end());
+
+			if (m_vPrevColliders != m_vCurrColliders)
+				setIdleState(false);
+		}
+	}
+
+	m_vPrevColliders = m_vCurrColliders;
+	m_vCurrColliders.clear();
 }
 
 void Rigidbody::updateInertiaTensors()
@@ -320,7 +387,7 @@ CollisionInfo Rigidbody::computeCollision(Rigidbody* rigidbodyA, Rigidbody* rigi
 	return checkCollisionSAT(rigidbodyA->m_mTransformMatrix, rigidbodyB->m_mTransformMatrix);
 }
 
-double Rigidbody::computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, const SimulationParameters* params, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth) {
+double Rigidbody::computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, double collisionFactor, Vec3 collisionPoint, Vec3 collisionNormal) {
 	
 	// If both rigidbodies are kinematic, ignore collisions:
 	if (rigidbodyA->m_bIsKinematic && rigidbodyB->m_bIsKinematic)
@@ -328,13 +395,11 @@ double Rigidbody::computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, c
 
 	// In this situation, this object is not kinematic, and the other is kinematic:
 	if (rigidbodyB->m_bIsKinematic)
-		return computeImpulse(rigidbodyB, rigidbodyA, params, collisionPoint, -collisionNormal, collisionDepth);
+		return computeImpulse(rigidbodyB, rigidbodyA, collisionFactor, collisionPoint, -collisionNormal);
 
 	// There are thus only two remaining possibilities:
 	// - Either rigidbodyA is kinematic, and rigidbodyB is not
 	// - Or both objects are not kinematic
-
-	double c = params->collisionFactor;
 	
 	// Compute the impulse to update both rigidbodies:
 	Vec3 position = collisionPoint;
@@ -364,11 +429,7 @@ double Rigidbody::computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, c
 		Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
 
 		// Result of the impulse:
-		double J = -(1 + c) * dot(vr, n) / (1 / Mb + dot(B, n));
-
-		// If the impulse is too small, ignore it and use position correction instead:
-		if (J < params->minimumImpulse)
-			return J;
+		double J = -(1 + collisionFactor) * dot(vr, n) / (1 / Mb + dot(B, n));
 		
 		// Update the linear velocity of rigidbodyB:
 		rigidbodyB->m_vLinearVelocity = vb - J * n / Mb;
@@ -396,11 +457,7 @@ double Rigidbody::computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, c
 		Vec3 B = cross(invIb.transformVector(cross(xb, n)), xb);
 
 		// Result of the impulse:
-		double J = -(1 + c) * dot(vr, n) / (1 / Ma + 1 / Mb + dot(A + B, n));
-
-		// If the impulse is too small, ignore it and use position correction instead:
-		if (J < params->minimumImpulse)
-			return J;
+		double J = -(1 + collisionFactor) * dot(vr, n) / (1 / Ma + 1 / Mb + dot(A + B, n));
 
 		// Update va and vb for both rigidbodies:
 		rigidbodyA->m_vLinearVelocity = va + J * n / Ma;

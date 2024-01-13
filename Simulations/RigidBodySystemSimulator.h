@@ -77,11 +77,16 @@ private:
 	// Define a structure that encapsulates a collision info, as well as the indices 
 	// of the rigidbodies that are colliding
 	struct Collision {
-		int i1, i2;						// Indices of the two rigidbodies that are colliding
-		CollisionInfo collisionInfo;	// Info about the collision
-
-		Collision(int i1, int i2, CollisionInfo collisionInfo) : 
-			i1(i1), i2(i2), collisionInfo(collisionInfo) {}
+		int i1, i2;				// The indices of the two rigidbodies that are colliding
+		Vec3 collisionPoint;	// The position of the collision point in world space
+		Vec3 collisionNormal;	// The direction of the impulse from j to i
+		float collisionDepth;   // The distance of the collision point to the surface
+		
+		Collision(int i1, int i2, CollisionInfo info) : 
+			i1(i1), i2(i2),
+			collisionPoint(info.collisionPointWorld), 
+			collisionNormal(info.normalWorld),
+			collisionDepth(info.depth) {}
 	};
 };
 #endif

@@ -11,8 +11,10 @@ struct SimulationParameters {
 	double linearFriction;
 	double angularFriction;
 
-	// If the impulse is lower than this value, we ignore it and use the position correction instead:
-	double minimumImpulse;
+	// If the linear and angular velocities of a rigidbody is below these values, this object 
+	// can go in idle state:
+	double sqMinimumLinearVelocity;		// This is the square of the value (to avoid computing square roots)
+	double sqMinimumAngularVelocity;	// This is the square of the value (to avoid computing square roots)
 };
 
 class Rigidbody {
@@ -35,6 +37,9 @@ public:
 	void setForce(Vec3 force);
 	void clearForces();
 
+	// Add a new rigidbody to the list of rigidbodies colliding this one
+	void addCollider(Rigidbody* rigidbody);
+
 	// Add some getters and setters:
 	double getMass() const;
 	void setMass(double mass);
@@ -51,8 +56,14 @@ public:
 
 	void setParams(SimulationParameters* params);
 
-	void setKinematic(boolean isKinematic);
-	boolean isKinematic() const;
+	void setKinematic(bool isKinematic);
+	bool isKinematic() const;
+
+	bool isIdle() const;
+
+	// Go in idle state if the number of frames since the last idle state is above a threshold:
+	void allowIdleState();
+	void setIdleState(bool isIdle);
 
 	Vec3 getLinearVelocity() const;
 	void setLinearVelocity(Vec3 linearVelocity);
@@ -68,10 +79,15 @@ public:
 	inline Vec3 up() const;				// Y-axis
 	inline Vec3 forward() const;		// Z-axis
 
+	// Look at our current colliders, and check if we are still in idle state.
+	// As soon as one collider is not in idle state, we also loose this state:
+	void checkIdleState();
+
 	static CollisionInfo computeCollision(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB);
 
-	// Compute and return the impulse between two rigidbodies:
-	static double computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, const SimulationParameters* params, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth);
+	// Compute the impulse between two rigidbodies, apply this impulse to the rigidbodies, and return
+	// the computed impulse:
+	static double computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, double collisionFactor, Vec3 collisionPoint, Vec3 collisionNormal);
 
 	// Correct the position of the given rigidbody, given the collision info with another rigidbody that is supposed 
 	// to be fixed. We can use this function when the impulse between two rigidbodies is small (i.e. collision with ground)
@@ -109,7 +125,20 @@ private:
 	double m_fBoundingSphereRadius;
 
 	// If the rigidbody is kinematic, it behaves like if it had an infinite mass:
-	boolean m_bIsKinematic;
+	bool m_bIsKinematic;
+
+	// If the rigidbody is idle, this means that it doesn't need to be updated (it's velocity is null,
+	// and the impulses it's getting from other rigidbodies is almost zero). A rigidbody will exit the
+	// idle state as soon as the state of the rigidbodies that is colliding it changes
+	bool m_bIsIdle;
+
+	// How many frames this rigidbody was updated, since the last time it was in idle state:
+	// This counter is used to prevent going in idle state if we just loose this state:
+	long frameCounterNotIdle = 0;
+
+	// List of the rigidbodies that were colliding this object in the previous and current frame:
+	vector<Rigidbody*> m_vPrevColliders;
+	vector<Rigidbody*> m_vCurrColliders;
 
 	Vec3 m_vLinearVelocity;
 	Vec3 m_vAngularVelocity;

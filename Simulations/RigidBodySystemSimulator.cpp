@@ -16,7 +16,6 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 	m_SimulationParameters.collisionFactor = 1;
 	m_SimulationParameters.linearFriction = 0;		// Disable linear friction
 	m_SimulationParameters.angularFriction = 0;		// Disable angular friction
-	m_SimulationParameters.minimumImpulse = 0.05;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -40,8 +39,7 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Linear friction", TW_TYPE_DOUBLE, &m_SimulationParameters.linearFriction, "min=0 max=0.05 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Angular friction", TW_TYPE_DOUBLE, &m_SimulationParameters.angularFriction, "min=0 max=0.05 step=0.001");
-		TwAddVarRW(DUC->g_pTweakBar, "Minimum impulse", TW_TYPE_DOUBLE, &m_SimulationParameters.minimumImpulse, "min=0 step=0.001");
-
+		
 		TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "min=0");
 
 		TwAddVarRW(DUC->g_pTweakBar, "Correct position", TW_TYPE_BOOLCPP, &m_bEnablePositionCorrection, "");
@@ -234,8 +232,10 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 	// Setup simulation parameters:
 	m_SimulationParameters.collisionFactor = 0.2;
-	m_SimulationParameters.angularFriction = 0.008;
-	m_SimulationParameters.linearFriction = 0.008;
+	m_SimulationParameters.angularFriction = 0.002;
+	m_SimulationParameters.linearFriction = 0.002;
+	m_SimulationParameters.sqMinimumAngularVelocity = 0.5;
+	m_SimulationParameters.sqMinimumLinearVelocity = 0.1;
 	g_fTimestep = 0.003f;
 
 	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
@@ -288,6 +288,57 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 void RigidBodySystemSimulator::manageCollisions()
 {
+	// First, find the collisions between all the rigidbodies:
+	vector<Collision> collisions;
+	for (int i = 0; i < m_vRigidbodies.size(); i++) {
+		for (int j = i + 1; j < m_vRigidbodies.size(); j++) {
+			CollisionInfo collision = Rigidbody::computeCollision(&m_vRigidbodies[i], &m_vRigidbodies[j]);
+
+			if (collision.isValid) {
+				collisions.push_back(Collision(i, j, collision));
+				m_vRigidbodies[i].addCollider(&m_vRigidbodies[j]);
+				m_vRigidbodies[j].addCollider(&m_vRigidbodies[i]);
+			}
+		}
+	}
+
+	// Recompute which rigidbodies are in idle state or not. A rigidbody can stay in idle state only if
+	// all the rigidbodies colliding it are also in idle state:
+	for (auto& r : m_vRigidbodies)
+		r.checkIdleState();
+
+	// Now we can compute the impulse of each collision, but there is no need to compute impulses
+	// between rigidbodies in idle state:
+	for (auto& collision : collisions) {
+		Rigidbody* r1 = &m_vRigidbodies[collision.i1];
+		Rigidbody* r2 = &m_vRigidbodies[collision.i2];
+
+		if (!r1->isIdle() || !r2->isIdle()) {
+			Rigidbody::computeImpulse(r1, r2, m_SimulationParameters.collisionFactor,
+				collision.collisionPoint, collision.collisionNormal);
+		}
+	}
+
+	// Finally, we can see which rigidbodies can go in idle state:
+	for (int i = 0; i < m_vRigidbodies.size(); i++) {
+		double sqLinearVelocity = normNoSqrt(m_vRigidbodies[i].getLinearVelocity());
+		double sqAngularVelocity = normNoSqrt(m_vRigidbodies[i].getAngularVelocity());
+
+		// If the linear and angular velocities of an object are small, we can consider
+		// that this object is fixed:
+		bool isFixed = sqLinearVelocity < m_SimulationParameters.sqMinimumLinearVelocity
+			&& sqAngularVelocity < m_SimulationParameters.sqMinimumAngularVelocity;
+
+		// TODO: We should also look at the forces before doing that !
+		if(isFixed)
+			m_vRigidbodies[i].allowIdleState();
+	}
+}
+
+/*
+// Old version to manage collisions:
+void RigidBodySystemSimulator::manageCollisionsOld()
+{
 	for (int i = 0; i < m_vRigidbodies.size(); i++) {
 		for (int j = i + 1; j < m_vRigidbodies.size(); j++) {
 			CollisionInfo collision = Rigidbody::computeCollision(&m_vRigidbodies[i], &m_vRigidbodies[j]);
@@ -309,7 +360,7 @@ void RigidBodySystemSimulator::manageCollisions()
 			}
 		}
 	}
-}
+}*/
 
 void RigidBodySystemSimulator::fireRigidbody()
 {
@@ -337,7 +388,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 	}
 
 	else if (m_iTestScenario == 3) {	// For angry birds
-		Rigidbody bird = Rigidbody(&m_SimulationParameters, 10, Vec3(-3, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2));
+		Rigidbody bird = Rigidbody(&m_SimulationParameters, 1, Vec3(-3, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2));
 		bird.color = Vec3(1, 0, 0);
 		bird.setForce(Vec3(0, -m_fGravity, 0));
 		bird.setLinearVelocity(Vec3(10, 2, 0));
