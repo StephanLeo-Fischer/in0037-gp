@@ -21,11 +21,9 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
 	return
-		"Demo1: One-step,"
-		"Demo2: Single-body,"
-		"Demo3: Collision,"
-		"Demo4: Complex,"
-		"Demo5: Collision debug,";
+		"Test demo,"
+		"Angry birds demo,"
+		"Collisions debug,";
 }
 
 // Called when we reset the scene, or change the test case:
@@ -34,21 +32,15 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	this->DUC = DUC;
 	switch (m_iTestCase)
 	{
-	case DEMO1_ONESTEP:
-		break;
+	case TEST_DEMO:
+		TwAddVarRW(DUC->g_pTweakBar, "Fire scenario", TW_TYPE_INT32, &m_iTestScenario, "min=0 max=3");
 
-	case DEMO2_SINGLE_BODY:
-		break;
-
-	case DEMO3_COLLISION:
-		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
-		break;
-
-	case DEMO4_COMPLEX:
+	case ANGRY_BIRDS_DEMO:
+		m_iTestScenario = 3;
 		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Linear friction", TW_TYPE_DOUBLE, &m_SimulationParameters.linearFriction, "min=0 max=0.05 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Angular friction", TW_TYPE_DOUBLE, &m_SimulationParameters.angularFriction, "min=0 max=0.05 step=0.001");
-		TwAddVarRW(DUC->g_pTweakBar, "Minimum impulse", TW_TYPE_DOUBLE, &m_SimulationParameters.minimumImpulse, "min=0 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Minimum impulse", TW_TYPE_DOUBLE, &m_SimulationParameters.minimumImpulse, "min=0 step=0.001");
 
 		TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "min=0");
 
@@ -59,6 +51,9 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		TwType TW_TYPE_METHOD;
 		TW_TYPE_METHOD = TwDefineEnumFromString("Debug lines", "None,Linear Velocity,Angular Velocity,Angular Momentum,Forces");
 		TwAddVarRW(DUC->g_pTweakBar, "Debug lines", TW_TYPE_METHOD, &m_iDebugLine, "");
+		break;
+
+	case COLLISIONS_DEMO:
 		break;
 
 	default:
@@ -74,7 +69,7 @@ void RigidBodySystemSimulator::reset() {
 
 void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateContext) {
 
-	if (m_iTestCase == 4) {
+	if (m_iTestCase == COLLISIONS_DEMO) {
 		collisionDebugger.draw(DUC);
 	}
 	else {
@@ -93,38 +88,18 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 	m_iTestCase = testCase;
 	switch (m_iTestCase)
 	{
-	case DEMO1_ONESTEP:
-		cout << "Switch to Demo1: One-step !" << endl;
-		setupDemoSingleBody();
-
-		// Compute a time step of 2, using Euler method:
-		m_vRigidbodies[0].timestepEuler(2);
-
-		cout << "Result of the simulation: Euler, one step with h = 2" << endl;
-		cout << "Linear velocity: " << getLinearVelocityOfRigidBody(0) << endl;
-		cout << "Angular velocity: " << getAngularVelocityOfRigidBody(0) << endl;
-
-		velocity = m_vRigidbodies[0].getVelocityOfPoint(Vec3(0.3, 0.5, 0.25));
-		cout << "World space velocity of point (0.3, 0.5, 0.25): " << velocity << endl;
+	case TEST_DEMO:
+		cout << "Switch to Test demo: Fire rigidbodies to see the simulator stability !" << endl;
+		setupTestDemo();
 		break;
 
-	case DEMO2_SINGLE_BODY:
-		cout << "Switch to Demo2: Single body !" << endl;
-		setupDemoSingleBody();
+	case ANGRY_BIRDS_DEMO:
+		cout << "Switch to Angry Birds Demo !" << endl;
+		setupAngryBirdsDemo();
 		break;
 
-	case DEMO3_COLLISION:
-		cout << "Switch to Demo3: Collision between two rigidbodies !" <<endl;
-		setupDemoCollision();
-		break;
-
-	case DEMO4_COMPLEX:
-		cout << "Switch to Demo4: Complex !" << endl;
-		setupDemoComplex();
-		break;
-
-	default:
-		cout << "Collision debugger !" << endl;
+	case COLLISIONS_DEMO:
+		cout << "Switch to Collision debug: See the collision point returned by SAT !" <<endl;
 		m_vRigidbodies.clear();
 		break;
 	}
@@ -137,13 +112,8 @@ void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{
-	case DEMO1_ONESTEP:
-		// This case requires only one update, and is thus handled by notifyCaseChanged()
-		break;
-
-	case DEMO2_SINGLE_BODY:
-	case DEMO3_COLLISION:
-	case DEMO4_COMPLEX:
+	case TEST_DEMO:
+	case ANGRY_BIRDS_DEMO:
 		// Compute forces applied to the rigidbodies dynamically:
 		// updateForces();
 
@@ -243,48 +213,9 @@ void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity) {
 	m_vRigidbodies.at(i).setLinearVelocity(velocity);
 }
 
-void RigidBodySystemSimulator::setupDemoSingleBody()
+
+void RigidBodySystemSimulator::setupTestDemo()
 {
-	m_vRigidbodies.clear();
-
-	// Setup simulation parameters:
-	m_SimulationParameters.collisionFactor = 1;
-	m_SimulationParameters.angularFriction = 0;
-	m_SimulationParameters.linearFriction = 0;
-
-	float mass = 2;
-	Vec3 position = Vec3(0, 0, 0);
-	Vec3 rotation = Vec3(0, 0, 90);
-	Vec3 scale = Vec3(1, 0.6, 0.5);
-
-	Rigidbody r = Rigidbody(&m_SimulationParameters, mass, position, rotation, scale);
-	r.addTorque(Vec3(0.3, 0.5, 0.25), Vec3(1, 1, 0));
-	m_vRigidbodies.push_back(r);
-}
-
-void RigidBodySystemSimulator::setupDemoCollision()
-{
-	m_vRigidbodies.clear();
-
-	// Setup simulation parameters:
-	m_SimulationParameters.collisionFactor = 0.9;
-	m_SimulationParameters.angularFriction = 0;
-	m_SimulationParameters.linearFriction = 0;
-	g_fTimestep = 0.003f;
-
-	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -1, 0), Vec3(0, 0, 0), Vec3(10, 1, 10));
-	ground.color = Vec3(0.1);
-	ground.setKinematic(true);
-	
-	Rigidbody plank = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 0, 0), Vec3(0, 0, 20), Vec3(2, 0.1, 0.01));
-	plank.color = Vec3(0.6, 0.27, 0.03);
-	plank.setForce(Vec3(0, -m_fGravity, 0));
-
-	m_vRigidbodies.push_back(ground);
-	m_vRigidbodies.push_back(plank);
-}
-
-void RigidBodySystemSimulator::setupDemoComplex() {
 	m_vRigidbodies.clear();
 
 	// Setup simulation parameters:
@@ -293,13 +224,66 @@ void RigidBodySystemSimulator::setupDemoComplex() {
 	m_SimulationParameters.linearFriction = 0.008;
 	g_fTimestep = 0.003f;
 
-	const float GROUND_POSITION = 0;
-
-	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, GROUND_POSITION-0.5f, 0), Vec3(0, 0, 0), Vec3(10, 1, 10));
-	ground.color = Vec3(0.1);
+	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground.setKinematic(true);
-
 	m_vRigidbodies.push_back(ground);
+}
+
+void RigidBodySystemSimulator::setupAngryBirdsDemo() {
+	m_vRigidbodies.clear();
+
+	// Setup simulation parameters:
+	m_SimulationParameters.collisionFactor = 0.2;
+	m_SimulationParameters.angularFriction = 0.008;
+	m_SimulationParameters.linearFriction = 0.008;
+	g_fTimestep = 0.003f;
+
+	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	ground.setKinematic(true);
+	m_vRigidbodies.push_back(ground);
+
+	const float mass = 1;
+
+	// For testing: create a kind of angry birds game:
+	Rigidbody planks[10]{
+		Rigidbody(&m_SimulationParameters, mass, Vec3(-1, 0.1, 0), Vec3(0.0), Vec3(0.1, 0.2, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(0, 0.1, 0), Vec3(0.0), Vec3(0.1, 0.2, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(-1, 0.5, 0), Vec3(0.0), Vec3(0.1, 0.4, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(0, 0.5, 0), Vec3(0.0), Vec3(0.1, 0.4, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(0.6, 0.4, 0), Vec3(0.0), Vec3(0.1, 0.4, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(1.1, 0.4, 0), Vec3(0.0), Vec3(0.1, 0.4, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(0.6, 0.65, 0), Vec3(0.0), Vec3(0.4, 0.1, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(1.275, 0.65, 0), Vec3(0.0), Vec3(0.65, 0.1, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(-0.5, 0.25, 0), Vec3(0.0), Vec3(1.2, 0.1, 0.1)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(-0.5, 0.75, 0), Vec3(0.0), Vec3(1.2, 0.1, 0.1)),
+	};
+	
+	for (int i = 0; i < 10; i++) {
+		planks[i].color = Vec3(120, 57, 0) / 255.0f;
+		planks[i].setForce(Vec3(0, -m_fGravity, 0));
+		m_vRigidbodies.push_back(planks[i]);
+	}
+	
+	Rigidbody ground1 = Rigidbody(&m_SimulationParameters, mass, Vec3(1, 0.1, 0), Vec3(0.0), Vec3(1.2, 0.2, 0.1));
+	Rigidbody ground2 = Rigidbody(&m_SimulationParameters, mass, Vec3(1.5, 0.4, 0), Vec3(0.0), Vec3(0.2, 0.4, 0.1));
+	ground1.setKinematic(true);
+	ground2.setKinematic(true);
+	m_vRigidbodies.push_back(ground1);
+	m_vRigidbodies.push_back(ground2);
+
+	Rigidbody pigs[5]{
+		Rigidbody(&m_SimulationParameters, mass, Vec3(-0.75, 0.4, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(-0.25, 0.4, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(-0.5, 0.9, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(0.6, 0.8, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
+		Rigidbody(&m_SimulationParameters, mass, Vec3(1.2, 0.8, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
+	};
+
+	for (int i = 0; i < 5; i++) {
+		pigs[i].color = Vec3(0, 120, 0) / 255.0f;
+		pigs[i].setForce(Vec3(0, -m_fGravity, 0));
+		m_vRigidbodies.push_back(pigs[i]);
+	}
 }
 
 void RigidBodySystemSimulator::manageCollisions()
@@ -317,10 +301,10 @@ void RigidBodySystemSimulator::manageCollisions()
 						Rigidbody::correctPosition(&m_vRigidbodies[i], &m_vRigidbodies[j], collision.collisionPointWorld, -collision.normalWorld, collision.depth);
 
 					else if (!m_vRigidbodies[i].isKinematic())
-						Rigidbody::correctPosition(&m_vRigidbodies[i], collision.collisionPointWorld, collision.normalWorld, collision.depth, true);
+						Rigidbody::correctPosition(&m_vRigidbodies[i], collision.collisionPointWorld, collision.normalWorld, collision.depth);
 					
 					else if (!m_vRigidbodies[j].isKinematic())
-						Rigidbody::correctPosition(&m_vRigidbodies[j], collision.collisionPointWorld, -collision.normalWorld, collision.depth, true);
+						Rigidbody::correctPosition(&m_vRigidbodies[j], collision.collisionPointWorld, -collision.normalWorld, collision.depth);
 				}
 			}
 		}
@@ -329,10 +313,34 @@ void RigidBodySystemSimulator::manageCollisions()
 
 void RigidBodySystemSimulator::fireRigidbody()
 {
-	//Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
-	Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.04, 0.2));
-	box.setForce(Vec3(0, -m_fGravity, 0));
-	box.setLinearVelocity(Vec3(-10, 0, 0));
-	box.setAngularVelocity(Vec3(0, 80, 0));
-	m_vRigidbodies.push_back(box);
+	// Use different scenarios to test the simulator in different situations:
+	
+	if (m_iTestScenario == 0) {	// Small objects with no velocity
+		Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
+		box.setForce(Vec3(0, -m_fGravity, 0));
+		m_vRigidbodies.push_back(box);
+	}
+
+	else if (m_iTestScenario == 1) {	// Throw spinning boxes
+		Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.04, 0.2));
+		box.setForce(Vec3(0, -m_fGravity, 0));
+		box.setLinearVelocity(Vec3(-10, 0, 0));
+		box.setAngularVelocity(Vec3(0, 80, 0));
+		m_vRigidbodies.push_back(box);
+	}
+	
+	else if (m_iTestScenario == 2) {	// Stack boxes to make a tower
+		Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 2, 0), Vec3(0.0), Vec3(1, 0.1, 1));
+		box.setForce(Vec3(0, -m_fGravity, 0));
+		box.setAngularVelocity(Vec3(0, 80, 0));
+		m_vRigidbodies.push_back(box);
+	}
+
+	else if (m_iTestScenario == 3) {	// For angry birds
+		Rigidbody bird = Rigidbody(&m_SimulationParameters, 10, Vec3(-3, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2));
+		bird.color = Vec3(1, 0, 0);
+		bird.setForce(Vec3(0, -m_fGravity, 0));
+		bird.setLinearVelocity(Vec3(10, 2, 0));
+		m_vRigidbodies.push_back(bird);
+	}
 }

@@ -55,9 +55,9 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 	}
 
 	// TEST:
-	DUC->drawLine(m_vPosition, red, m_vPosition + right(), red);
-	DUC->drawLine(m_vPosition, green, m_vPosition + up(), green);
-	DUC->drawLine(m_vPosition, blue, m_vPosition + forward(), blue);
+	// DUC->drawLine(m_vPosition, red, m_vPosition + right(), red);
+	// DUC->drawLine(m_vPosition, green, m_vPosition + up(), green);
+	// DUC->drawLine(m_vPosition, blue, m_vPosition + forward(), blue);
 
 	DUC->endLine();
 }
@@ -421,23 +421,21 @@ double Rigidbody::computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, c
 	}
 }
 
-void Rigidbody::correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth, bool stabilize)
+void Rigidbody::correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth)
 {
 	Vec3 n1 = collisionNormal;				// Vector from the fixed rigidbody to the given rigidbody
 	Vec3 n2 = r->getAxisAlong(&n1);
 	double rigidbodyHeight = norm(n2);		// Height of the rigidbody along n2
 	n2 /= rigidbodyHeight;
 
-	if (stabilize) {
-		// Multiply the part of the linear velocity along the normal by 0.9 to simulate friction:
-		Vec3 velocityAlongNormal = dot(r->m_vLinearVelocity, n1) * n1;
-		r->m_vLinearVelocity = 0.9f * velocityAlongNormal + (r->m_vLinearVelocity - velocityAlongNormal);
+	// Multiply the part of the linear velocity along the normal by 0.9 to simulate friction:
+	Vec3 velocityAlongNormal = dot(r->m_vLinearVelocity, n1) * n1;
+	r->m_vLinearVelocity = 0.9f * velocityAlongNormal + (r->m_vLinearVelocity - velocityAlongNormal);
 
-		// For the angular velocity, this is the opposite: the object can rotate around the normal, but has
-		// friction along the other axes:
-		velocityAlongNormal = dot(r->m_vAngularVelocity, n1) * n1;
-		r->m_vAngularVelocity = velocityAlongNormal + 0.9f * (r->m_vAngularVelocity - velocityAlongNormal);
-	}
+	// For the angular velocity, this is the opposite: the object can rotate around the normal, but has
+	// friction along the other axes:
+	velocityAlongNormal = dot(r->m_vAngularVelocity, n1) * n1;
+	r->m_vAngularVelocity = velocityAlongNormal + 0.9f * (r->m_vAngularVelocity - velocityAlongNormal);
 
 	double dot_n1_n2 = dot(n1, n2);
 
@@ -504,6 +502,6 @@ void Rigidbody::correctPosition(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, Ve
 	double h1 = rigidbodyB->m_fMass * collisionDepth / sumMass;
 	double h2 = rigidbodyA->m_fMass * collisionDepth / sumMass;
 
-	correctPosition(rigidbodyA, collisionPoint, -collisionNormal, h1, false);
-	correctPosition(rigidbodyB, collisionPoint, collisionNormal, h2, false);
+	correctPosition(rigidbodyA, collisionPoint, -collisionNormal, h1);
+	correctPosition(rigidbodyB, collisionPoint, collisionNormal, h2);
 }

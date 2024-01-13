@@ -76,7 +76,7 @@ public:
 	// Correct the position of the given rigidbody, given the collision info with another rigidbody that is supposed 
 	// to be fixed. We can use this function when the impulse between two rigidbodies is small (i.e. collision with ground)
 	// The collisionNormal should be from the fixed rigidbody to the given rigidbody:
-	static void correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth, bool stabilize);
+	static void correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth);
 
 	// Correct the position of both rigidbodies, given the collision info between them.
 	// We can use this function when the impulse between the rigidbodies is small.

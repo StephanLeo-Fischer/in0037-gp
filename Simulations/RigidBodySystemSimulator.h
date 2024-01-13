@@ -9,10 +9,10 @@
 
 #define TESTCASEUSEDTORUNTEST 2
 
-#define DEMO1_ONESTEP 0
-#define DEMO2_SINGLE_BODY 1
-#define DEMO3_COLLISION 2
-#define DEMO4_COMPLEX 3
+#define TEST_DEMO 0
+#define ANGRY_BIRDS_DEMO 1
+#define COLLISIONS_DEMO 2
+
 
 class RigidBodySystemSimulator:public Simulator {
 public:
@@ -59,6 +59,7 @@ private:
 	int m_iDebugLine = 0;
 	bool m_bEnablePositionCorrection = true;
 	float m_fGravity = 9.81f;
+	int m_iTestScenario = 0;
 
 	// Used to generate random colors:
 	std::mt19937 eng;
@@ -67,9 +68,8 @@ private:
 	// TODO: Delete this (used for debug):
 	CollisionDebugger collisionDebugger;
 
-	void setupDemoSingleBody();
-	void setupDemoCollision();
-	void setupDemoComplex();
+	void setupTestDemo();
+	void setupAngryBirdsDemo();
 	
 	void manageCollisions();
 	void fireRigidbody();
