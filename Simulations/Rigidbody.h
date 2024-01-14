@@ -57,6 +57,9 @@ public:
 	// Add a new rigidbody to the list of rigidbodies colliding this one
 	void addCollider(Rigidbody* rigidbody);
 
+	// Clear current colliders, set prev to current:
+	void updateColliders();
+
 	// Add some getters and setters:
 	double getMass() const;
 	void setMass(double mass);
@@ -78,9 +81,9 @@ public:
 
 	bool isIdle() const;
 
-	// Go in idle state only if we were allowed several frames in a row:
-	void allowIdleState(bool allow);
-	void setIdleState(bool isIdle);
+	void exitIdleState();
+
+	void checkIsMooving();
 
 	Vec3 getLinearVelocity() const;
 	void setLinearVelocity(Vec3 linearVelocity);
@@ -96,9 +99,11 @@ public:
 	inline Vec3 up() const;				// Y-axis
 	inline Vec3 forward() const;		// Z-axis
 
-	// Look at our current colliders, and check if we are still in idle state.
-	// As soon as one collider is not in idle state, we also loose this state:
-	void checkIdleState();
+	// Check if the rigidbody can stay in idle state:
+	void checkKeepIdleState();
+
+	// Check if the rigidbody can enter the idle state:
+	void checkEnterIdleState();
 
 	static CollisionInfo computeCollision(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB);
 
@@ -151,11 +156,11 @@ private:
 	// idle state as soon as the state of the rigidbodies that is colliding it changes
 	bool m_bIsIdle;
 
-	// How many times we were allowed to go in idle state (i.e. how many frames our position was 
-	// really small). We use this counter, because is a rigidbody was allowed to go in idle state
-	// as soon as he stopped mooving, a rigidbody floating in the air with a velocity of zero
-	// would never have the opportunity to loose its idle state:
-	int m_iCountAllowIdleState;
+	// If the velocity of the rigidbody is above the thresholds defined in the simulation parameters:
+	bool m_bIsMooving;
+
+	// TESTING:
+	int m_iRemainingFramesBeforeIdle = 10;
 
 	// List of the rigidbodies that were colliding this object in the previous and current frame:
 	vector<Rigidbody*> m_vPrevColliders;
@@ -163,6 +168,9 @@ private:
 
 	Vec3 m_vLinearVelocity;
 	Vec3 m_vAngularVelocity;
+
+	// TESTING:
+	Vec3 m_vFilteredAngularVelocity;
 
 	// Rotation and transformation matrices:
 	Mat4 m_mRotMat;

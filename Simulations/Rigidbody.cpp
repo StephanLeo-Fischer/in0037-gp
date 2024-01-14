@@ -17,10 +17,11 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 
 	m_bIsKinematic(false),
 	m_bIsIdle(false),
-	m_iCountAllowIdleState(0),
+	m_bIsMooving(true),
 
 	m_vLinearVelocity(0.0),
 	m_vAngularVelocity(0.0),
+	m_vFilteredAngularVelocity(0.0),
 	color(0.2) {
 
 	updateTransformMatrices();
@@ -47,12 +48,15 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 		DUC->drawLine(m_vPosition, red, m_vPosition + m_vLinearVelocity, red);
 		break;
 	case 2:
-		DUC->drawLine(m_vPosition, green, m_vPosition + m_vAngularVelocity, green);
+		DUC->drawLine(m_vPosition, red, m_vPosition + m_vAngularVelocity, red);
 		break;
 	case 3:
-		DUC->drawLine(m_vPosition, blue, m_vPosition + m_vAngularMomentum, blue);
+		DUC->drawLine(m_vPosition, red, m_vPosition + m_vFilteredAngularVelocity, red);
 		break;
 	case 4:
+		DUC->drawLine(m_vPosition, green, m_vPosition + m_vAngularMomentum, green);
+		break;
+	case 5:
 		DUC->drawLine(m_vPosition, blue, m_vPosition + m_vSumForces, blue);
 		break;
 	}
@@ -66,6 +70,8 @@ void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 }
 
 void Rigidbody::timestepEuler(double timestep) {
+	m_vFilteredAngularVelocity = 0.9 * m_vFilteredAngularVelocity + 0.1 * m_vAngularVelocity;
+
 	if (m_bIsKinematic || m_bIsIdle)
 		return;
 
@@ -121,6 +127,11 @@ void Rigidbody::clearForces() {
 
 void Rigidbody::addCollider(Rigidbody* rigidbody) {
 	m_vCurrColliders.push_back(rigidbody);
+}
+
+void Rigidbody::updateColliders() {
+	m_vPrevColliders = m_vCurrColliders;
+	m_vCurrColliders.clear();
 }
 
 double Rigidbody::getMass() const { return m_fMass; }
@@ -180,31 +191,27 @@ bool Rigidbody::isKinematic() const { return m_bIsKinematic; }
 
 bool Rigidbody::isIdle() const { return m_bIsIdle; }
 
-void Rigidbody::allowIdleState(bool allow)
-{
-	// If we are already in idle state, we have nothing to do:
-	if (m_bIsIdle)
-		return;
-
-	if (allow) {
-		if (++m_iCountAllowIdleState >= 10)
-			m_bIsIdle = true;
-	}
-	else
-		m_iCountAllowIdleState = 0;
-}
-
-void Rigidbody::setIdleState(bool isIdle)
+void Rigidbody::exitIdleState()
 {
 	// Kinematic objects are always in idle state, and shouldn't be affected by this function
 	// For non kinematic object, changing their idle state will also change the state of all
 	// the rigidbodies colliding this object:
-	if (!m_bIsKinematic && isIdle != m_bIsIdle) {
-		m_bIsIdle = isIdle;
+	if (!m_bIsKinematic && m_bIsIdle) {
+		m_bIsIdle = false;
 
 		for (auto& r : m_vCurrColliders)
-			r->setIdleState(isIdle);
+			r->exitIdleState();
 	}
+}
+
+void Rigidbody::checkIsMooving() {
+	double sqLinearVelocity = normNoSqrt(m_vLinearVelocity);
+	double sqAngularVelocity = normNoSqrt(m_vFilteredAngularVelocity);
+
+	// The object is not mooving if its linear and angular velocities are below the thresholds
+	// defined in the simulation parameters:
+	m_bIsMooving = sqLinearVelocity >= m_pParams->sqMinimumLinearVelocity
+		|| sqAngularVelocity >= m_pParams->sqMinimumAngularVelocity;
 }
 
 Vec3 Rigidbody::getLinearVelocity() const { return m_vLinearVelocity; }
@@ -244,32 +251,53 @@ inline Vec3 Rigidbody::forward() const {
 // A rigidbody can stay in idle state only if all the rigidbodies colliding it are also in idle state.
 // The rigidbody also looses immediately this state if the set of colliding objects has changed
 // since the last frame:
-void Rigidbody::checkIdleState()
+void Rigidbody::checkKeepIdleState()
 {
 	// As soon as one colliding object is not in idle state, this object also looses its idle state.
 	// If we are already not in idle state, there is nothing to do:
 	if (m_bIsIdle) {
 		for (int i = 0; i < m_vCurrColliders.size(); i++) {
 			if (!m_vCurrColliders[i]->m_bIsIdle) {
-				setIdleState(false);
-				break;
+				exitIdleState();
+				return;
 			}
 		}
 
 		// We also loose the idle state if the set of colliders has changed:
 		if (m_vCurrColliders.size() != m_vPrevColliders.size())
-			setIdleState(false);
+			exitIdleState();
 		else {
 			sort(m_vPrevColliders.begin(), m_vPrevColliders.end());
 			sort(m_vCurrColliders.begin(), m_vCurrColliders.end());
 
 			if (m_vPrevColliders != m_vCurrColliders)
-				setIdleState(false);
+				exitIdleState();
 		}
 	}
+}
 
-	m_vPrevColliders = m_vCurrColliders;
-	m_vCurrColliders.clear();
+void Rigidbody::checkEnterIdleState() {
+	// We can enter idle state if this rigidbody, and all the colliding rigidbodies 
+	// have a small velocity:
+
+	if (m_bIsIdle)
+		return;
+
+	if (m_bIsMooving) {
+		m_iRemainingFramesBeforeIdle = 5;
+		return;
+	}
+
+	for (auto& r : m_vCurrColliders)
+		if (r->m_bIsMooving)
+			return;
+
+	if (--m_iRemainingFramesBeforeIdle <= 0) {
+		m_bIsIdle = true;
+		m_vLinearVelocity = 0;
+		m_vAngularVelocity = 0;
+		m_vAngularMomentum = 0;
+	}
 }
 
 void Rigidbody::updateInertiaTensors()

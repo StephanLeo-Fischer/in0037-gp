@@ -23,8 +23,8 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 	m_SimulationParameters.maxLinearCorrectionSpeed = 0.5;
 	m_SimulationParameters.maxAngularCorrectionSpeed = 0.5;
 
-	m_SimulationParameters.sqMinimumLinearVelocity = 0.05;
-	m_SimulationParameters.sqMinimumAngularVelocity = 0.2;
+	m_SimulationParameters.sqMinimumLinearVelocity = 0.06;
+	m_SimulationParameters.sqMinimumAngularVelocity = 0.04;
 
 	g_fTimestep = 0.003;
 }
@@ -59,7 +59,7 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		TwAddButton(DUC->g_pTweakBar, "Fire Rigidbody", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->fireRigidbody(); }, nullptr, "");
 		
 		TwType TW_TYPE_METHOD;
-		TW_TYPE_METHOD = TwDefineEnumFromString("Debug lines", "None,Linear Velocity,Angular Velocity,Angular Momentum,Forces");
+		TW_TYPE_METHOD = TwDefineEnumFromString("Debug lines", "None,Linear Velocity,Angular Velocity,Filtered Angular Velocity,Angular Momentum,Forces");
 		TwAddVarRW(DUC->g_pTweakBar, "Debug lines", TW_TYPE_METHOD, &m_iDebugLine, "");
 		break;
 
@@ -303,7 +303,7 @@ void RigidBodySystemSimulator::manageCollisions(double timestep)
 	// Recompute which rigidbodies are in idle state or not. A rigidbody can stay in idle state only if
 	// all the rigidbodies colliding it are also in idle state:
 	for (auto& r : m_vRigidbodies)
-		r.checkIdleState();
+		r.checkKeepIdleState();
 
 	// Now we can compute the impulse of each collision, but there is no need to compute impulses
 	// between rigidbodies in idle state:
@@ -316,19 +316,16 @@ void RigidBodySystemSimulator::manageCollisions(double timestep)
 		}
 	}
 
-	// Finally, we can see which rigidbodies can go in idle state:
-	for (int i = 0; i < m_vRigidbodies.size(); i++) {
-		double sqLinearVelocity = normNoSqrt(m_vRigidbodies[i].getLinearVelocity());
-		double sqAngularVelocity = normNoSqrt(m_vRigidbodies[i].getAngularVelocity());
+	// Check which rigidbodies are still moving after the impulse:
+	for (auto& r : m_vRigidbodies)
+		r.checkIsMooving();
 
-		// If the linear and angular velocities of an object are small, we can consider
-		// that this object is fixed:
-		bool isFixed = sqLinearVelocity < m_SimulationParameters.sqMinimumLinearVelocity
-			&& sqAngularVelocity < m_SimulationParameters.sqMinimumAngularVelocity;
+	for (auto& r : m_vRigidbodies)
+		r.checkEnterIdleState();
 
-		// Allow the rigidbody to go in idle state only if it's not mooving:
-		m_vRigidbodies[i].allowIdleState(isFixed);
-	}
+	// Finally, update the colliders of the rigidbodies:
+	for (auto& r : m_vRigidbodies)
+		r.updateColliders();
 }
 
 void RigidBodySystemSimulator::manageCollision(Rigidbody* r1, Rigidbody* r2, const Collision* collision, double timestep)
@@ -378,7 +375,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 
 	else if (m_iTestScenario == 3) {	// For angry birds
 		Rigidbody bird = Rigidbody(&m_SimulationParameters, 1, Vec3(-3, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2));
-		bird.color = Vec3(1, 0, 0);
+		bird.color = Vec3(0.8);
 		bird.setForce(Vec3(0, -m_fGravity, 0));
 		bird.setLinearVelocity(Vec3(10, 2, 0));
 		m_vRigidbodies.push_back(bird);
