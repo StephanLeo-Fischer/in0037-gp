@@ -12,6 +12,8 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 	randCol = std::uniform_real_distribution<float>(0.0f, 1.0f);
 
 	// Data Attributes
+	g_fTimestep = 0.003;
+
 	m_SimulationParameters = {};
 	m_SimulationParameters.collisionFactor = 0.2;
 
@@ -20,13 +22,11 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 
 	m_SimulationParameters.minimumImpulse = 0.05;
 
-	m_SimulationParameters.maxLinearCorrectionSpeed = 0.5;
-	m_SimulationParameters.maxAngularCorrectionSpeed = 0.5;
+	m_SimulationParameters.maxLinearCorrectionSpeed = 0.2;
+	m_SimulationParameters.maxAngularCorrectionSpeed = 0.3;
 
 	m_SimulationParameters.sqMinimumLinearVelocity = 0.06;
-	m_SimulationParameters.sqMinimumAngularVelocity = 0.04;
-
-	g_fTimestep = 0.003;
+	m_SimulationParameters.sqMinimumAngularVelocity = 0.1;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -290,18 +290,29 @@ void RigidBodySystemSimulator::manageCollisions(double timestep)
 	vector<Collision> collisions;
 	for (int i = 0; i < m_vRigidbodies.size(); i++) {
 		for (int j = i + 1; j < m_vRigidbodies.size(); j++) {
-			CollisionInfo collision = Rigidbody::computeCollision(&m_vRigidbodies[i], &m_vRigidbodies[j]);
+			Rigidbody* r1 = &m_vRigidbodies[i];
+			Rigidbody* r2 = &m_vRigidbodies[j];
+
+			// If both objects are idle, we don't need to recompute the 
+			// collision between them (it will be the same that in 
+			// the previous frame) !
+			if (r1->isIdle() && r2->isIdle())
+				continue;
+
+			// Else, we compute the collision between the two objects:
+			CollisionInfo collision = Rigidbody::computeCollision(r1, r2);
 
 			if (collision.isValid) {
 				collisions.push_back(Collision(i, j, collision));
-				m_vRigidbodies[i].addCollider(&m_vRigidbodies[j]);
-				m_vRigidbodies[j].addCollider(&m_vRigidbodies[i]);
+				r1->addCollider(r2);
+				r2->addCollider(r1);
 			}
 		}
 	}
 
-	// Recompute which rigidbodies are in idle state or not. A rigidbody can stay in idle state only if
-	// all the rigidbodies colliding it are also in idle state:
+	// Recompute which rigidbodies are in idle state or not. A rigidbody 
+	// can stay in idle state only if all the rigidbodies colliding it 
+	// are also in idle state:
 	for (auto& r : m_vRigidbodies)
 		r.checkKeepIdleState();
 

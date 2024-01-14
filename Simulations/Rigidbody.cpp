@@ -132,6 +132,15 @@ void Rigidbody::addCollider(Rigidbody* rigidbody) {
 void Rigidbody::updateColliders() {
 	m_vPrevColliders = m_vCurrColliders;
 	m_vCurrColliders.clear();
+
+	// Testing: we know that idle objects are not moving. Thus,
+	// the collisions between idle objects will be the same in
+	// the next frame. We don't need to recompute them !
+	if (m_bIsIdle) {
+		for (auto& c : m_vPrevColliders)
+			if (c->m_bIsIdle)
+				m_vCurrColliders.push_back(c);
+	}
 }
 
 double Rigidbody::getMass() const { return m_fMass; }
