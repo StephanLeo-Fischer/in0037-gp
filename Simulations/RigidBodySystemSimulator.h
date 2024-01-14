@@ -68,12 +68,6 @@ private:
 	// TODO: Delete this (used for debug):
 	CollisionDebugger collisionDebugger;
 
-	void setupTestDemo();
-	void setupAngryBirdsDemo();
-	
-	void manageCollisions();
-	void fireRigidbody();
-
 	// Define a structure that encapsulates a collision info, as well as the indices 
 	// of the rigidbodies that are colliding
 	struct Collision {
@@ -81,12 +75,19 @@ private:
 		Vec3 collisionPoint;	// The position of the collision point in world space
 		Vec3 collisionNormal;	// The direction of the impulse from j to i
 		float collisionDepth;   // The distance of the collision point to the surface
-		
-		Collision(int i1, int i2, CollisionInfo info) : 
+
+		Collision(int i1, int i2, CollisionInfo info) :
 			i1(i1), i2(i2),
-			collisionPoint(info.collisionPointWorld), 
+			collisionPoint(info.collisionPointWorld),
 			collisionNormal(info.normalWorld),
 			collisionDepth(info.depth) {}
 	};
+
+	void setupTestDemo();
+	void setupAngryBirdsDemo();
+	
+	void manageCollisions(double timestep);
+	void manageCollision(Rigidbody* r1, Rigidbody* r2, const Collision* collision, double timestep);
+	void fireRigidbody();
 };
 #endif

@@ -17,6 +17,7 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 
 	m_bIsKinematic(false),
 	m_bIsIdle(false),
+	m_iCountAllowIdleState(0),
 
 	m_vLinearVelocity(0.0),
 	m_vAngularVelocity(0.0),
@@ -30,7 +31,8 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 
 void Rigidbody::draw(DrawingUtilitiesClass* DUC, int debugLine) const
 {
-	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, m_bIsIdle ? Vec3(1, 0, 0) : color);
+	// Use a red tint for idle rigidbodies:
+	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, m_bIsIdle ? Vec3(color.x, color.y/2, color.z/2) : color);
 	DUC->drawRigidBody(m_mTransformMatrix);
 
 	// For debug:
@@ -67,8 +69,6 @@ void Rigidbody::timestepEuler(double timestep) {
 	if (m_bIsKinematic || m_bIsIdle)
 		return;
 
-	frameCounterNotIdle++;
-
 	Quat w = Quat(m_vAngularVelocity.x, m_vAngularVelocity.y, m_vAngularVelocity.z, 0);
 	
 	m_vPosition += timestep * m_vLinearVelocity;
@@ -81,9 +81,9 @@ void Rigidbody::timestepEuler(double timestep) {
 	m_vLinearVelocity += timestep * m_vSumForces / m_fMass;
 	m_vAngularMomentum += timestep * computeTorque();
 
-	// Add friction to the linear velocity and angular momentum, to prevent the Euler method from creating energy:
-	m_vLinearVelocity *= (1 - m_pParams->linearFriction);
-	m_vAngularMomentum *= (1 - m_pParams->angularFriction);
+	// Add friction to the linear velocity and angular momentum, to stabilize the system:
+	m_vLinearVelocity *= (1 - m_pParams->airFriction);
+	m_vAngularMomentum *= (1 - m_pParams->airFriction);
 
 	// Update the current inertia tensor, and use it to update the angular velocity:
 	m_mCurrentInvInertiaTensor = computeCurrentInvInertiaTensor();
@@ -180,10 +180,18 @@ bool Rigidbody::isKinematic() const { return m_bIsKinematic; }
 
 bool Rigidbody::isIdle() const { return m_bIsIdle; }
 
-void Rigidbody::allowIdleState()
+void Rigidbody::allowIdleState(bool allow)
 {
-	if (frameCounterNotIdle > 2)
-		m_bIsIdle = true;
+	// If we are already in idle state, we have nothing to do:
+	if (m_bIsIdle)
+		return;
+
+	if (allow) {
+		if (++m_iCountAllowIdleState >= 10)
+			m_bIsIdle = true;
+	}
+	else
+		m_iCountAllowIdleState = 0;
 }
 
 void Rigidbody::setIdleState(bool isIdle)
@@ -193,9 +201,6 @@ void Rigidbody::setIdleState(bool isIdle)
 	// the rigidbodies colliding this object:
 	if (!m_bIsKinematic && isIdle != m_bIsIdle) {
 		m_bIsIdle = isIdle;
-
-		if (!isIdle)
-			frameCounterNotIdle = 0;
 
 		for (auto& r : m_vCurrColliders)
 			r->setIdleState(isIdle);
@@ -478,28 +483,28 @@ double Rigidbody::computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, d
 	}
 }
 
-void Rigidbody::correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth)
+void Rigidbody::correctPosition(Rigidbody* r, const SimulationParameters* params, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth, double timestep)
 {
 	Vec3 n1 = collisionNormal;				// Vector from the fixed rigidbody to the given rigidbody
 	Vec3 n2 = r->getAxisAlong(&n1);
 	double rigidbodyHeight = norm(n2);		// Height of the rigidbody along n2
 	n2 /= rigidbodyHeight;
 
-	// Multiply the part of the linear velocity along the normal by 0.9 to simulate friction:
+	// Add friction to the part of the linear velocity orthogonal to the normal:
 	Vec3 velocityAlongNormal = dot(r->m_vLinearVelocity, n1) * n1;
-	r->m_vLinearVelocity = 0.9f * velocityAlongNormal + (r->m_vLinearVelocity - velocityAlongNormal);
+	r->m_vLinearVelocity = velocityAlongNormal + (1-params->objectFriction) * (r->m_vLinearVelocity - velocityAlongNormal);
 
-	// For the angular velocity, this is the opposite: the object can rotate around the normal, but has
-	// friction along the other axes:
+	// For the angular velocity, the friction should be applied to the normal part:
 	velocityAlongNormal = dot(r->m_vAngularVelocity, n1) * n1;
-	r->m_vAngularVelocity = velocityAlongNormal + 0.9f * (r->m_vAngularVelocity - velocityAlongNormal);
+	r->m_vAngularVelocity = (1-params->objectFriction) * velocityAlongNormal + (r->m_vAngularVelocity - velocityAlongNormal);
 
 	double dot_n1_n2 = dot(n1, n2);
 
 	// If n1 and n2 are already aligned, we can only play on the position of the rigidbody to
 	// correct the intersection:
 	if (abs(dot_n1_n2 - 1) < 1e-5) {
-		r->m_vPosition += collisionDepth * n1;
+		float posCorrection = min(collisionDepth, params->maxLinearCorrectionSpeed * timestep);
+		r->m_vPosition += posCorrection * n1;
 	}
 
 	// Else, we have to rotate the rigidbody first, in order to minimize the collision depth, and
@@ -519,23 +524,30 @@ void Rigidbody::correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisio
 		// Compute the maximum value for h, that can be corrected only by rotating the rigidbody:
 		double hMax = -rigidbodyHeight / 2 - dot_OM_n1;
 
-		// If collisionDepth > hMax, we can't prevent the intersection just by rotating the rigidbody.
-		// We need also to translate it.
+		// If collisionDepth > hMax, we can't prevent the intersection just by rotating the 
+		// rigidbody. We also need to translate it:
 		if (collisionDepth > hMax) {
-			// First align the rigidbody with the collision normal (this is the highest 
-			// possible correction just by rotation):
+			// Rotating by this angle would align the rigidbody with the normal:
 			double alphaMax = acos(dot_n1_n2);
 
+			// Prevent the rotation from beign too big:
+			alphaMax = min(alphaMax, params->maxAngularCorrectionSpeed * timestep);
+
+			// Rotate the rigidbody of alphaMax around k:
 			r->m_qRotation = (Quat(k, alphaMax) * r->m_qRotation).unit();
 
 			// Then, correct the remaining error by translating the rigidbody:
-			r->m_vPosition += (collisionDepth - hMax) * n1;
+			double posCorrection = min(collisionDepth - hMax, params->maxLinearCorrectionSpeed * timestep);
+			r->m_vPosition += posCorrection * n1;
 		}
 
 		// Else, we can correct the collision just with a rotation of the rigidbody:
 		else {
 			double normOM = norm(OM);
 			double alpha = acos(dot_OM_n1 / normOM) - acos((collisionDepth + dot_OM_n1) / normOM);
+
+			// Prevent the rotation from beign too big:
+			alpha = min(alpha, params->maxAngularCorrectionSpeed * timestep);
 
 			if (dot(OM, cross(n1, k)) < 0)
 				alpha = -alpha;
@@ -548,7 +560,8 @@ void Rigidbody::correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisio
 	r->updateCurrentInertiaTensor();
 }
 
-void Rigidbody::correctPosition(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth)
+void Rigidbody::correctPosition(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, const SimulationParameters* params, 
+	Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth, double timestep)
 {
 	// Instead of correcting the position of one rigidbody, keeping the second one fixed, we correct the position
 	// of both rigidbodies, depending on their mass:
@@ -559,6 +572,6 @@ void Rigidbody::correctPosition(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, Ve
 	double h1 = rigidbodyB->m_fMass * collisionDepth / sumMass;
 	double h2 = rigidbodyA->m_fMass * collisionDepth / sumMass;
 
-	correctPosition(rigidbodyA, collisionPoint, -collisionNormal, h1);
-	correctPosition(rigidbodyB, collisionPoint, collisionNormal, h2);
+	correctPosition(rigidbodyA, params, collisionPoint, -collisionNormal, h1, timestep);
+	correctPosition(rigidbodyB, params, collisionPoint, collisionNormal, h2, timestep);
 }

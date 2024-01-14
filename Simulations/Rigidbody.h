@@ -3,18 +3,35 @@
 #include "Simulator.h"
 #include "collisionDetect.h"
 
-// Define a structure to put all the parameters describing the physics parameters of the rigidbody;
+// Define a structure to put all the parameters describing the physics parameters of the simulation:
 struct SimulationParameters {
+	// The collision factor used to compute the impulse between two colliding rigidbodies:
 	double collisionFactor;
 
-	// Two factors added to avoid creating energy with the Euler integration method:
-	double linearFriction;
-	double angularFriction;
+	// Each time we do a timestepEuler(), we multiply the linear velocity and angular 
+	// momentum of the rigidbody by (1-airFriction) to simulate friction with air:
+	double airFriction;
 
-	// If the linear and angular velocities of a rigidbody is below these values, this object 
-	// can go in idle state:
-	double sqMinimumLinearVelocity;		// This is the square of the value (to avoid computing square roots)
-	double sqMinimumAngularVelocity;	// This is the square of the value (to avoid computing square roots)
+	// This friction is used to reduce the speed of an object sliding on the ground 
+	// for example:
+	double objectFriction;
+
+	// If the impulse is lower than this value, we will also use position correction on the rigidbody:
+	double minimumImpulse;
+
+	// When two rigidbodies are in each other, if the impulse is not big enough,
+	// we may have to update directly the position of the rigidbodies (instead of the speed),
+	// to manage the intersection. However, the changes shouldn't be too big (we don't want
+	// to "teleport" objects to different positions). Thus, we define a maximum linear and
+	// angular correction speed:
+	double maxLinearCorrectionSpeed;
+	double maxAngularCorrectionSpeed;
+
+	// If the linear and angular velocities of a rigidbody is below these values, this 
+	// object can go in idle state. In this state, the rigidbody stops beign updated, 
+	// util it's collided by a new rigidbody:
+	double sqMinimumLinearVelocity;		// Square of the min (avoid computing square roots)
+	double sqMinimumAngularVelocity;	// Square of the min (avoid computing square roots)
 };
 
 class Rigidbody {
@@ -61,8 +78,8 @@ public:
 
 	bool isIdle() const;
 
-	// Go in idle state if the number of frames since the last idle state is above a threshold:
-	void allowIdleState();
+	// Go in idle state only if we were allowed several frames in a row:
+	void allowIdleState(bool allow);
 	void setIdleState(bool isIdle);
 
 	Vec3 getLinearVelocity() const;
@@ -92,12 +109,14 @@ public:
 	// Correct the position of the given rigidbody, given the collision info with another rigidbody that is supposed 
 	// to be fixed. We can use this function when the impulse between two rigidbodies is small (i.e. collision with ground)
 	// The collisionNormal should be from the fixed rigidbody to the given rigidbody:
-	static void correctPosition(Rigidbody* r, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth);
+	static void correctPosition(Rigidbody* r, const SimulationParameters* params, 
+		Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth, double timestep);
 
 	// Correct the position of both rigidbodies, given the collision info between them.
 	// We can use this function when the impulse between the rigidbodies is small.
 	// The collision normal should be from A to B:
-	static void correctPosition(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth);
+	static void correctPosition(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, const SimulationParameters* params, 
+		Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth, double timestep);
 
 private:
 	void updateTransformMatrices();		// We need to call this when we update the position, rotation or scale of the rigidbody
@@ -132,9 +151,11 @@ private:
 	// idle state as soon as the state of the rigidbodies that is colliding it changes
 	bool m_bIsIdle;
 
-	// How many frames this rigidbody was updated, since the last time it was in idle state:
-	// This counter is used to prevent going in idle state if we just loose this state:
-	long frameCounterNotIdle = 0;
+	// How many times we were allowed to go in idle state (i.e. how many frames our position was 
+	// really small). We use this counter, because is a rigidbody was allowed to go in idle state
+	// as soon as he stopped mooving, a rigidbody floating in the air with a velocity of zero
+	// would never have the opportunity to loose its idle state:
+	int m_iCountAllowIdleState;
 
 	// List of the rigidbodies that were colliding this object in the previous and current frame:
 	vector<Rigidbody*> m_vPrevColliders;

@@ -13,9 +13,20 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 
 	// Data Attributes
 	m_SimulationParameters = {};
-	m_SimulationParameters.collisionFactor = 1;
-	m_SimulationParameters.linearFriction = 0;		// Disable linear friction
-	m_SimulationParameters.angularFriction = 0;		// Disable angular friction
+	m_SimulationParameters.collisionFactor = 0.2;
+
+	m_SimulationParameters.airFriction = 0.002;
+	m_SimulationParameters.objectFriction = 0.015;
+
+	m_SimulationParameters.minimumImpulse = 0.05;
+
+	m_SimulationParameters.maxLinearCorrectionSpeed = 0.5;
+	m_SimulationParameters.maxAngularCorrectionSpeed = 0.5;
+
+	m_SimulationParameters.sqMinimumLinearVelocity = 0.05;
+	m_SimulationParameters.sqMinimumAngularVelocity = 0.2;
+
+	g_fTimestep = 0.003;
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -32,18 +43,19 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	switch (m_iTestCase)
 	{
 	case TEST_DEMO:
-		TwAddVarRW(DUC->g_pTweakBar, "Fire scenario", TW_TYPE_INT32, &m_iTestScenario, "min=0 max=3");
-
 	case ANGRY_BIRDS_DEMO:
-		m_iTestScenario = 3;
 		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
-		TwAddVarRW(DUC->g_pTweakBar, "Linear friction", TW_TYPE_DOUBLE, &m_SimulationParameters.linearFriction, "min=0 max=0.05 step=0.001");
-		TwAddVarRW(DUC->g_pTweakBar, "Angular friction", TW_TYPE_DOUBLE, &m_SimulationParameters.angularFriction, "min=0 max=0.05 step=0.001");
-		
+		TwAddVarRW(DUC->g_pTweakBar, "Air friction", TW_TYPE_DOUBLE, &m_SimulationParameters.airFriction, "min=0 max=0.5 step=0.001");
+		TwAddVarRW(DUC->g_pTweakBar, "Objects friction", TW_TYPE_DOUBLE, &m_SimulationParameters.objectFriction, "min=0 max=0.5 step=0.001");
+		TwAddVarRW(DUC->g_pTweakBar, "Minimum impulse", TW_TYPE_DOUBLE, &m_SimulationParameters.minimumImpulse, "min=0 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Max Linear correction speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxLinearCorrectionSpeed, "min=0 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Max Angular correction speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxAngularCorrectionSpeed, "min=0 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Min Linear velocity", TW_TYPE_DOUBLE, &m_SimulationParameters.sqMinimumLinearVelocity, "min=0 step=0.001");
+		TwAddVarRW(DUC->g_pTweakBar, "Min Angular velocity", TW_TYPE_DOUBLE, &m_SimulationParameters.sqMinimumAngularVelocity, "min=0 step=0.001");
+
 		TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "min=0");
 
-		TwAddVarRW(DUC->g_pTweakBar, "Correct position", TW_TYPE_BOOLCPP, &m_bEnablePositionCorrection, "");
-
+		TwAddVarRW(DUC->g_pTweakBar, "Fire scenario", TW_TYPE_INT32, &m_iTestScenario, "min=0 max=3");
 		TwAddButton(DUC->g_pTweakBar, "Fire Rigidbody", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->fireRigidbody(); }, nullptr, "");
 		
 		TwType TW_TYPE_METHOD;
@@ -118,7 +130,7 @@ void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 		for (Rigidbody& r : m_vRigidbodies)
 			r.timestepEuler(timestep);
 
-		manageCollisions();
+		manageCollisions(timestep);
 		break;
 
 	default:
@@ -216,12 +228,6 @@ void RigidBodySystemSimulator::setupTestDemo()
 {
 	m_vRigidbodies.clear();
 
-	// Setup simulation parameters:
-	m_SimulationParameters.collisionFactor = 0.2;
-	m_SimulationParameters.angularFriction = 0.008;
-	m_SimulationParameters.linearFriction = 0.008;
-	g_fTimestep = 0.003f;
-
 	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground.setKinematic(true);
 	m_vRigidbodies.push_back(ground);
@@ -229,14 +235,6 @@ void RigidBodySystemSimulator::setupTestDemo()
 
 void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	m_vRigidbodies.clear();
-
-	// Setup simulation parameters:
-	m_SimulationParameters.collisionFactor = 0.2;
-	m_SimulationParameters.angularFriction = 0.002;
-	m_SimulationParameters.linearFriction = 0.002;
-	m_SimulationParameters.sqMinimumAngularVelocity = 0.5;
-	m_SimulationParameters.sqMinimumLinearVelocity = 0.1;
-	g_fTimestep = 0.003f;
 
 	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground.setKinematic(true);
@@ -286,7 +284,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	}
 }
 
-void RigidBodySystemSimulator::manageCollisions()
+void RigidBodySystemSimulator::manageCollisions(double timestep)
 {
 	// First, find the collisions between all the rigidbodies:
 	vector<Collision> collisions;
@@ -309,13 +307,12 @@ void RigidBodySystemSimulator::manageCollisions()
 
 	// Now we can compute the impulse of each collision, but there is no need to compute impulses
 	// between rigidbodies in idle state:
-	for (auto& collision : collisions) {
-		Rigidbody* r1 = &m_vRigidbodies[collision.i1];
-		Rigidbody* r2 = &m_vRigidbodies[collision.i2];
+	for (int i = 0; i < collisions.size(); i++) {
+		Rigidbody* r1 = &m_vRigidbodies[collisions[i].i1];
+		Rigidbody* r2 = &m_vRigidbodies[collisions[i].i2];
 
 		if (!r1->isIdle() || !r2->isIdle()) {
-			Rigidbody::computeImpulse(r1, r2, m_SimulationParameters.collisionFactor,
-				collision.collisionPoint, collision.collisionNormal);
+			manageCollision(r1, r2, &collisions[i], timestep);
 		}
 	}
 
@@ -329,38 +326,30 @@ void RigidBodySystemSimulator::manageCollisions()
 		bool isFixed = sqLinearVelocity < m_SimulationParameters.sqMinimumLinearVelocity
 			&& sqAngularVelocity < m_SimulationParameters.sqMinimumAngularVelocity;
 
-		// TODO: We should also look at the forces before doing that !
-		if(isFixed)
-			m_vRigidbodies[i].allowIdleState();
+		// Allow the rigidbody to go in idle state only if it's not mooving:
+		m_vRigidbodies[i].allowIdleState(isFixed);
 	}
 }
 
-/*
-// Old version to manage collisions:
-void RigidBodySystemSimulator::manageCollisionsOld()
+void RigidBodySystemSimulator::manageCollision(Rigidbody* r1, Rigidbody* r2, const Collision* collision, double timestep)
 {
-	for (int i = 0; i < m_vRigidbodies.size(); i++) {
-		for (int j = i + 1; j < m_vRigidbodies.size(); j++) {
-			CollisionInfo collision = Rigidbody::computeCollision(&m_vRigidbodies[i], &m_vRigidbodies[j]);
+	double J = Rigidbody::computeImpulse(r1, r2, m_SimulationParameters.collisionFactor,
+		collision->collisionPoint, collision->collisionNormal);
 
-			if (collision.isValid) {
-				double J = Rigidbody::computeImpulse(&m_vRigidbodies[i], &m_vRigidbodies[j], &m_SimulationParameters,
-							collision.collisionPointWorld, collision.normalWorld, collision.depth);
+	if (J < m_SimulationParameters.minimumImpulse) {
+		if (!r1->isKinematic() && !r2->isKinematic())
+			Rigidbody::correctPosition(r1, r2, &m_SimulationParameters, collision->collisionPoint, 
+				-collision->collisionNormal, collision->collisionDepth, timestep);
 
-				if (J < m_SimulationParameters.minimumImpulse && m_bEnablePositionCorrection) {
-					if (!m_vRigidbodies[i].isKinematic() && !m_vRigidbodies[j].isKinematic())
-						Rigidbody::correctPosition(&m_vRigidbodies[i], &m_vRigidbodies[j], collision.collisionPointWorld, -collision.normalWorld, collision.depth);
+		else if (!r1->isKinematic())
+			Rigidbody::correctPosition(r1, &m_SimulationParameters, collision->collisionPoint, 
+				collision->collisionNormal, collision->collisionDepth, timestep);
 
-					else if (!m_vRigidbodies[i].isKinematic())
-						Rigidbody::correctPosition(&m_vRigidbodies[i], collision.collisionPointWorld, collision.normalWorld, collision.depth);
-					
-					else if (!m_vRigidbodies[j].isKinematic())
-						Rigidbody::correctPosition(&m_vRigidbodies[j], collision.collisionPointWorld, -collision.normalWorld, collision.depth);
-				}
-			}
-		}
+		else if (!r2->isKinematic())
+			Rigidbody::correctPosition(r2, &m_SimulationParameters, collision->collisionPoint, 
+				-collision->collisionNormal, collision->collisionDepth, timestep);
 	}
-}*/
+}
 
 void RigidBodySystemSimulator::fireRigidbody()
 {
