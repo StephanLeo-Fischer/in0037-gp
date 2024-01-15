@@ -58,10 +58,9 @@ private:
 	Point2D m_trackmouse;
 	Point2D m_oldtrackmouse;
 
-	vector<Rigidbody> m_vRigidbodies;
+	vector<RigidBody> m_vRigidbodies;	// Vector containing all the rigid bodies
 
 	// Set of parameters used for the simulation, that can be changed in the UI:
-	SimulationParameters m_SimulationParameters;
 	float m_fBoxSize = 1;
 	float m_fGravityForce = 10000;	// Only used for Demo Complex
 	int m_iDebugLine = 0;

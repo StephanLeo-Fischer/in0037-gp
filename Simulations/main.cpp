@@ -21,9 +21,9 @@ using namespace GamePhysics;
 //#define ADAPTIVESTEP
 
 //#define TEMPLATE_DEMO
-#define MASS_SPRING_SYSTEM
-#define RIGID_BODY_SYSTEM
-#define SPH_SYSTEM
+//#define MASS_SPRING_SYSTEM
+//#define RIGID_BODY_SYSTEM
+//#define SPH_SYSTEM
 #define OPEN_SIMULATION
 
 #ifdef TEMPLATE_DEMO
@@ -40,6 +40,8 @@ using namespace GamePhysics;
 #endif
 #ifdef OPEN_SIMULATION
 #include "OpenSimulation.h"
+#include "MassSpringSystemSimulator.h"
+#include "RigidBodySystemSimulator.h"
 #endif
 
 
