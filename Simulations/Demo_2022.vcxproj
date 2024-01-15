@@ -238,6 +238,9 @@
     <ClInclude Include="OpenSimulation.h" />
     <ClInclude Include="Rigidbody.h" />
     <ClInclude Include="DrawingUtilitiesClass.h" />
+    <ClInclude Include="MassSpringSystemSimulator.h" />
+    <ClInclude Include="RigidBody.h" />
+    <ClInclude Include="RigidBodySystem.h" />
     <ClInclude Include="RigidBodySystemSimulator.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="TemplateSimulator.h" />

@@ -1,102 +1,83 @@
-#ifndef RIGIDBODY_h
-#define RIGIDBODY_h
-#include "Simulator.h"
+#pragma once
 
-// Define a structure to put all the parameters describing the physics parameters of the rigidbody;
-struct SimulationParameters {
-	float collisionFactor;
+#include <iostream>
+#include <vector>
+#include "util/vectorbase.h"
+#include "util/matrixbase.h"
+#include "util/quaternion.h"
 
-	// Two factors added to avoid creating energy with the Euler integration method:
-	float linearFriction;
-	float angularFriction;
-};
+using namespace DirectX;
 
-class Rigidbody {
+class RigidBody
+{
 public:
-	// Color of the rigidbody (used for drawing)
-	Vec3 color;
 
-	// Create a rigidbody with an orientation using Euler angles (in degrees):
-	Rigidbody(SimulationParameters* params, float mass, Vec3 position, Vec3 rotation, Vec3 scale);
+	// #########################################################
+	//           CONSTRUCTOR/DESCRUCTOR
+	// #########################################################
 
-	// Create a rigidbody with an orientation defined with a quaternion:
-	Rigidbody(SimulationParameters* params, float mass, Vec3 position, Quat rotation, Vec3 scale);
+	RigidBody();
+	RigidBody(const GamePhysics::Vec3 center, const GamePhysics::Vec3 size, float mass);
+	virtual ~RigidBody();
 
-	void draw(DrawingUtilitiesClass * DUC, int debugLine) const;
+	// #########################################################
+	//           METHODS
+	// #########################################################
 
-	void timestepEuler(float timestep);
-
-	void addTorque(Vec3 location, Vec3 force);
-	void addForce(Vec3 force);
-	void setForce(Vec3 force);
-	void clearForces();
-
-	// Add some getters and setters:
-	float getMass() const;
-	void setMass(float mass);
-
-	Vec3 getPosition() const;
-	void setPosition(Vec3 position);
-
-	Quat getRotation() const;
-	void setRotation(Vec3 rotation);
-	void setRotation(Quat rotation);
-
-	Vec3 getScale() const;
-	void setScale(Vec3 scale);
-
-	void setParams(SimulationParameters* params);
-
-	void setKinematic(boolean isKinematic);
-	boolean isKinematic() const;
-
-	Vec3 getLinearVelocity() const;
-	void setLinearVelocity(Vec3 linearVelocity);
-
-	Vec3 getAngularVelocity() const;
-	void setAngularVelocity(Vec3 angularVelocity);
-
-	// Compute the velocity of the given position in global space, if it was part of the rigidbody:
-	Vec3 getVelocityOfPoint(Vec3 position) const;
-
-	void manageCollision(Rigidbody* other);
-
-private:
-	void updateTransformMatrices();		// We need to call this when we update the position, rotation or scale of the rigidbody
-	void updateInertialTensors();		// We need to call this when we update the mass or the scale of the rigidbody
-	void updateCurrentInertialTensor();	// We need to call this when we changed the rotation of the rigidbody
+	static bool collide(RigidBody& body1, RigidBody& body2);
 	
-	Mat4 computeCurrentInertialTensor() const;
-	Mat4 computeCurrentInvInertialTensor() const;
-	Vec3 computeTorque();
+	void              addForce(const GamePhysics::Vec3 force, const GamePhysics::Vec3 where);
+	void              addForceWorld(const GamePhysics::Vec3 force, const GamePhysics::Vec3 where);
+	void              update(float deltaTime);
+	GamePhysics::Mat4 computeInertiaTensorInverse(const GamePhysics::Vec3 size, float massInverse);
+	std::string 	  toString();
 
-	// Pointer to a set of parameters for the simulation
-	SimulationParameters * m_pParams;
+	// #########################################################
+	//           SETTERS
+	// #########################################################
 
-	float m_fMass;
+	void setCenter(const GamePhysics::Vec3  center)                  {m_vCenter = center;}
+	void setVelocity(const GamePhysics::Vec3  velocity)              {m_vVelocity = velocity;}
+	void setRotation(const GamePhysics::Quat  rotation)              {m_qRotation = rotation;}
+	void setAngularVelocity(const GamePhysics::Vec3 angularVelocity) {m_vAngularVelocity = angularVelocity;}
 
-	Vec3 m_vPosition;
-	Quat m_qRotation;
-	Vec3 m_vScale;
+	// #########################################################
+	//           GETTERS
+	// #########################################################
 
-	// If the rigidbody is kinematic, it behaves like if it had an infinite mass:
-	boolean m_bIsKinematic;
+	std::vector<DirectX::XMVECTOR> getCorners();
+	const GamePhysics::Vec3        getCenter()    const {return m_vCenter;}
+	const GamePhysics::Vec3        getVelocity()  const {return m_vVelocity;}
+	const GamePhysics::Vec3        getAngularV()  const {return m_vAngularVelocity;}
+	const GamePhysics::Mat4        getWorld2Obj() const {return m_mWorldToObj;}
+	const GamePhysics::Mat4        getObj2World() const {return m_mObjToWorld;}
+	static const GamePhysics::Vec3 s_corners[8];
 
-	Vec3 m_vLinearVelocity;
-	Vec3 m_vAngularVelocity;
+	// #########################################################
+	//           ATTRIBUTES
+	// #########################################################
 
-	// Rotation and transformation matrices:
-	Mat4 m_mRotMat;
-	Mat4 m_mTransformMatrix;	// scaleMat * rotMat * translatMat
+	GamePhysics::Vec3 m_vCollisonPoint;
+	GamePhysics::Vec3 m_vCollisioNormal;
+	GamePhysics::Vec3 m_vTotalVelocity;
+	GamePhysics::Vec3 m_vRelVelocity;
 
-	// Initial inertial tensor of the rigidbody, as well as it's inverse:
-	Mat4 m_mInertialTensor0;
-	Mat4 m_mInvInertialTensor0;
-	Mat4 m_mCurrentInvInertialTensor;	// R*inv(I)*inv(R)
+	GamePhysics::Vec3 m_vCenter;
+	GamePhysics::Quat m_qRotation;
+	GamePhysics::Vec3 m_vScale;
+	GamePhysics::Vec3 m_vAngularVelocity;
 
-	Vec3 m_vAngularMomentum;
+	GamePhysics::Vec3 m_vVelocity;
+	GamePhysics::Vec3 m_vMomentum;
+	GamePhysics::Mat4 m_mInertiaTensorInverse;
+	float             m_fMassInverse;
 
-	Vec3 m_vSumForces;						// Sum of the forces applied to this Rigidbody
-	vector<pair<Vec3, Vec3>> m_vTorques;	// All the torques (position, force) applied to this Rigidbody
+	GamePhysics::Mat4 m_mObjToWorld;
+	GamePhysics::Mat4 m_mWorldToObj;
+	GamePhysics::Mat4 m_mScaledObjToWorld;
+	GamePhysics::Mat4 m_mWorldToScaledObj;
+
+	GamePhysics::Vec3 m_vFrameForce;
+	GamePhysics::Vec3 m_vFrameTorque;
 };
-#endif
+
