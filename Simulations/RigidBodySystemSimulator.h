@@ -53,7 +53,10 @@ private:
 	Point2D m_prevmouse;		// Previous mouse position
 	boolean m_bMousePressed;
 
-	vector<Rigidbody> m_vRigidbodies;
+	// Vector of all the rigidbodies in the game, that are stored on the heap ! We need to store these
+	// in the heap, because we want the pointers in the spring structures to point to the same objects,
+	// even if we add or remove some elements in this vector:
+	vector<Rigidbody*> m_vRigidbodies;
 	vector<SpringStructure> m_vSpringStructures;
 
 	// Set of parameters used for the simulation, that can be changed in the UI:
@@ -66,7 +69,7 @@ private:
 
 	// Used to generate random colors:
 	std::mt19937 eng;
-	std::uniform_real_distribution<float> randCol;
+	std::uniform_real_distribution<float> randFloat;
 
 	// TODO: Delete this (used for debug):
 	CollisionDebugger collisionDebugger;
