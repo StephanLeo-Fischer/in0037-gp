@@ -22,8 +22,9 @@ using namespace GamePhysics;
 
 //#define TEMPLATE_DEMO
 //#define MASS_SPRING_SYSTEM
-#define RIGID_BODY_SYSTEM
+//#define RIGID_BODY_SYSTEM
 //#define SPH_SYSTEM
+#define OPEN_SIMULATION
 
 #ifdef TEMPLATE_DEMO
 #include "TemplateSimulator.h"
@@ -35,8 +36,12 @@ using namespace GamePhysics;
 #include "RigidBodySystemSimulator.h"
 #endif
 #ifdef SPH_SYSTEM
-//#include "SPHSystemSimulator.h"
+#include "SPHSystemSimulator.h"
 #endif
+#ifdef OPEN_SIMULATION
+#include "OpenSimulation.h"
+#endif
+
 
 DrawingUtilitiesClass * g_pDUC;
 Simulator * g_pSimulator;

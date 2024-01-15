@@ -226,6 +226,7 @@
   <ItemGroup>
     <ClCompile Include="..\SimulatorTester\PublicMassSpringSystemTests.cpp" />
     <ClCompile Include="..\SimulatorTester\PublicRigidBodiesTests.cpp" />
+    <ClCompile Include="OpenSimulation.cpp" />
     <ClCompile Include="Rigidbody.cpp" />
     <ClCompile Include="RigidBodySystemSimulator.cpp" />
     <ClCompile Include="TemplateSimulator.cpp" />
@@ -234,6 +235,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="collisionDetect.h" />
+    <ClInclude Include="OpenSimulation.h" />
     <ClInclude Include="Rigidbody.h" />
     <ClInclude Include="DrawingUtilitiesClass.h" />
     <ClInclude Include="RigidBodySystemSimulator.h" />
