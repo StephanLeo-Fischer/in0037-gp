@@ -17,6 +17,7 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 
 	m_bIsKinematic(false),
 	m_bIsIdle(false),
+	m_bAllowIdleState(true),
 	m_bIsMooving(true),
 
 	m_vLinearVelocity(0.0),
@@ -122,7 +123,7 @@ void Rigidbody::setForce(Vec3 force) {
 
 void Rigidbody::clearForces() {
 	this->m_vTorques.clear();
-	this->m_vSumForces = 0;
+	this->m_vSumForces = Vec3(0, 0, 0);
 }
 
 void Rigidbody::addCollider(Rigidbody* rigidbody) {
@@ -200,6 +201,13 @@ bool Rigidbody::isKinematic() const { return m_bIsKinematic; }
 
 bool Rigidbody::isIdle() const { return m_bIsIdle; }
 
+void Rigidbody::allowIdleState(bool allow) {
+	m_bAllowIdleState = allow;
+
+	if (!allow && !m_bIsKinematic)
+		m_bIsIdle = false;
+}
+
 void Rigidbody::exitIdleState()
 {
 	// Kinematic objects are always in idle state, and shouldn't be affected by this function
@@ -257,6 +265,10 @@ inline Vec3 Rigidbody::forward() const {
 	return Vec3(m_mTransformMatrix.value[2][0], m_mTransformMatrix.value[2][1], m_mTransformMatrix.value[2][2]);
 }
 
+Vec3 Rigidbody::transformLocalToGlobal(Vec3 localPosition) {
+	return m_mTransformMatrix.transformVector(localPosition);
+}
+
 // A rigidbody can stay in idle state only if all the rigidbodies colliding it are also in idle state.
 // The rigidbody also looses immediately this state if the set of colliding objects has changed
 // since the last frame:
@@ -289,7 +301,7 @@ void Rigidbody::checkEnterIdleState() {
 	// We can enter idle state if this rigidbody, and all the colliding rigidbodies 
 	// have a small velocity:
 
-	if (m_bIsIdle)
+	if (m_bIsIdle || !m_bAllowIdleState)
 		return;
 
 	if (m_bIsMooving) {

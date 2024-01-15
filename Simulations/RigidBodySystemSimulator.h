@@ -4,6 +4,7 @@
 
 //add your header for your rigid body system, for e.g.,
 #include "Rigidbody.h"
+#include "SpringStructure.h"
 #include "collisionDetect.h"
 #include "CollisionDebugger.h"
 
@@ -11,7 +12,8 @@
 
 #define TEST_DEMO 0
 #define ANGRY_BIRDS_DEMO 1
-#define COLLISIONS_DEMO 2
+#define SPRINGS_DEMO 2
+#define COLLISIONS_DEMO 3
 
 
 class RigidBodySystemSimulator:public Simulator {
@@ -52,6 +54,7 @@ private:
 	boolean m_bMousePressed;
 
 	vector<Rigidbody> m_vRigidbodies;
+	vector<SpringStructure> m_vSpringStructures;
 
 	// Set of parameters used for the simulation, that can be changed in the UI:
 	SimulationParameters m_SimulationParameters;
@@ -85,6 +88,7 @@ private:
 
 	void setupTestDemo();
 	void setupAngryBirdsDemo();
+	void setupSpringsDemo();
 	
 	void manageCollisions(double timestep);
 	void manageCollision(Rigidbody* r1, Rigidbody* r2, const Collision* collision, double timestep);

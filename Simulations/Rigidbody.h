@@ -81,6 +81,8 @@ public:
 
 	bool isIdle() const;
 
+	void allowIdleState(bool allow);
+
 	void exitIdleState();
 
 	void checkIsMooving();
@@ -98,6 +100,8 @@ public:
 	inline Vec3 right() const;			// X-axis
 	inline Vec3 up() const;				// Y-axis
 	inline Vec3 forward() const;		// Z-axis
+
+	Vec3 transformLocalToGlobal(Vec3 localPosition);
 
 	// Check if the rigidbody can stay in idle state:
 	void checkKeepIdleState();
@@ -155,6 +159,9 @@ private:
 	// and the impulses it's getting from other rigidbodies is almost zero). A rigidbody will exit the
 	// idle state as soon as the state of the rigidbodies that is colliding it changes
 	bool m_bIsIdle;
+
+	// We can prevent some objects from going to idle state with this:
+	bool m_bAllowIdleState;
 
 	// If the velocity of the rigidbody is above the thresholds defined in the simulation parameters:
 	bool m_bIsMooving;

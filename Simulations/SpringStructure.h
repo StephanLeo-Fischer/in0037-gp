@@ -6,7 +6,18 @@
 // and a list of springs between them
 class SpringStructure {
 public:
-	// SpringStructure();
+
+	void drawSprings(DrawingUtilitiesClass* DUC);
+
+	void addRigidbody(Rigidbody* rigidbody);
+
+	void addSpring(int i1, int i2, Vec3 localAttach1, Vec3 localAttach2, float stiffness);
+
+	void addSpring(int i1, int i2, Vec3 localAttach1, Vec3 localAttach2, float initialLength, float stiffness);
+
+	void setExternalForce(Vec3 force);
+
+	void updateForces();
 
 private:
 	struct Spring {
@@ -35,8 +46,8 @@ private:
 	// External force applied to all the rigidbodies:
 	Vec3 m_vExternalForce;
 
-	vector<Rigidbody> rigidbodies;
-	vector<Spring> springs;
+	vector<Rigidbody*> m_vRigidbodies;
+	vector<Spring> m_vSprings;
 };
 
 #endif

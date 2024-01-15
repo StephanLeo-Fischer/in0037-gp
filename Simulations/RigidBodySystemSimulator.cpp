@@ -17,7 +17,7 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 	m_SimulationParameters = {};
 	m_SimulationParameters.collisionFactor = 0.2;
 
-	m_SimulationParameters.airFriction = 0.002;
+	m_SimulationParameters.airFriction = 0.003;
 	m_SimulationParameters.objectFriction = 0.015;
 
 	m_SimulationParameters.minimumImpulse = 0.05;
@@ -33,6 +33,7 @@ const char* RigidBodySystemSimulator::getTestCasesStr() {
 	return
 		"Test demo,"
 		"Angry birds demo,"
+		"Springs demo,"
 		"Collisions debug,";
 }
 
@@ -44,6 +45,7 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	{
 	case TEST_DEMO:
 	case ANGRY_BIRDS_DEMO:
+	case SPRINGS_DEMO:
 		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Air friction", TW_TYPE_DOUBLE, &m_SimulationParameters.airFriction, "min=0 max=0.5 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Objects friction", TW_TYPE_DOUBLE, &m_SimulationParameters.objectFriction, "min=0 max=0.5 step=0.001");
@@ -86,6 +88,10 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
 		// Draw all the rigidbodies:
 		for (auto& r : m_vRigidbodies)
 			r.draw(DUC, m_iDebugLine);
+
+		if (m_iTestCase == SPRINGS_DEMO)
+			for (auto& s : m_vSpringStructures)
+				s.drawSprings(DUC);
 	}
 	
 	Sleep(1);
@@ -93,8 +99,6 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
 
 // Called when we reset the scene, or change the test case:
 void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
-	Vec3 velocity;
-
 	m_iTestCase = testCase;
 	switch (m_iTestCase)
 	{
@@ -108,9 +112,15 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 		setupAngryBirdsDemo();
 		break;
 
+	case SPRINGS_DEMO:
+		cout << "Switch to Springs demo !" << endl;
+		setupSpringsDemo();
+		break;
+
 	case COLLISIONS_DEMO:
 		cout << "Switch to Collision debug: See the collision point returned by SAT !" <<endl;
 		m_vRigidbodies.clear();
+		m_vSpringStructures.clear();
 		break;
 	}
 }
@@ -122,11 +132,12 @@ void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 	// update current setup for each frame
 	switch (m_iTestCase)
 	{
+	case SPRINGS_DEMO:
+		for (auto& s : m_vSpringStructures)
+			s.updateForces();
+
 	case TEST_DEMO:
 	case ANGRY_BIRDS_DEMO:
-		// Compute forces applied to the rigidbodies dynamically:
-		// updateForces();
-
 		for (Rigidbody& r : m_vRigidbodies)
 			r.timestepEuler(timestep);
 
@@ -227,6 +238,7 @@ void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity) {
 void RigidBodySystemSimulator::setupTestDemo()
 {
 	m_vRigidbodies.clear();
+	m_vSpringStructures.clear();
 
 	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground.setKinematic(true);
@@ -235,6 +247,7 @@ void RigidBodySystemSimulator::setupTestDemo()
 
 void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	m_vRigidbodies.clear();
+	m_vSpringStructures.clear();
 
 	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground.setKinematic(true);
@@ -282,6 +295,63 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 		pigs[i].setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(pigs[i]);
 	}
+}
+
+void RigidBodySystemSimulator::setupSpringsDemo()
+{
+	m_vRigidbodies.clear();
+	m_vSpringStructures.clear();
+
+	// Create the ground:
+	Rigidbody ground = Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	ground.setKinematic(true);
+	m_vRigidbodies.push_back(ground);
+
+	// Create the platform:
+	Rigidbody platform = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 1.5, 0), Vec3(20, 45, 10), Vec3(2, 0.1, 2));
+	platform.color = Vec3(120, 57, 0) / 255.0f;
+	m_vRigidbodies.push_back(platform);
+
+	// Create pillars:
+	Rigidbody pillar1 = Rigidbody(&m_SimulationParameters, 1, Vec3(-1.5, 1, -1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
+	Rigidbody pillar2 = Rigidbody(&m_SimulationParameters, 1, Vec3(-1.5, 1, +1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
+	Rigidbody pillar3 = Rigidbody(&m_SimulationParameters, 1, Vec3(+1.5, 1, -1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
+	Rigidbody pillar4 = Rigidbody(&m_SimulationParameters, 1, Vec3(+1.5, 1, +1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
+
+	pillar1.setKinematic(true);
+	pillar2.setKinematic(true);
+	pillar3.setKinematic(true);
+	pillar4.setKinematic(true);
+
+	m_vRigidbodies.push_back(pillar1);
+	m_vRigidbodies.push_back(pillar2);
+	m_vRigidbodies.push_back(pillar3);
+	m_vRigidbodies.push_back(pillar4);
+
+	// Add some cube above the platform:
+	Rigidbody cube = Rigidbody(&m_SimulationParameters, 1, Vec3(0.4, 3, 0), Vec3(10, 20, 30), Vec3(0.5));
+	cube.color = Vec3(0, 0, 1);
+	cube.setForce(Vec3(0, -m_fGravity, 0));
+	m_vRigidbodies.push_back(cube);
+
+	// Create a spring structure to contain the pillars, the platform and the springs between them:
+	SpringStructure structure = SpringStructure();
+	structure.setExternalForce(Vec3(0, -m_fGravity, 0));
+
+	structure.addRigidbody(&m_vRigidbodies[1]);
+	structure.addRigidbody(&m_vRigidbodies[2]);
+	structure.addRigidbody(&m_vRigidbodies[3]);
+	structure.addRigidbody(&m_vRigidbodies[4]);
+	structure.addRigidbody(&m_vRigidbodies[5]);
+
+	float stiffness = 20;
+	float initialLength = 1;
+	structure.addSpring(0, 1, Vec3(-0.5, 0, -0.5), Vec3(0, 0.5, 0), initialLength, stiffness);
+	structure.addSpring(0, 2, Vec3(-0.5, 0, +0.5), Vec3(0, 0.5, 0), initialLength, stiffness);
+	structure.addSpring(0, 3, Vec3(+0.5, 0, -0.5), Vec3(0, 0.5, 0), initialLength, stiffness);
+	structure.addSpring(0, 4, Vec3(+0.5, 0, +0.5), Vec3(0, 0.5, 0), initialLength, stiffness);
+
+	m_vSpringStructures.push_back(structure);
 }
 
 void RigidBodySystemSimulator::manageCollisions(double timestep)
@@ -365,12 +435,14 @@ void RigidBodySystemSimulator::fireRigidbody()
 	
 	if (m_iTestScenario == 0) {	// Small objects with no velocity
 		Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
+		box.color = Vec3(1, 1, 0);
 		box.setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(box);
 	}
 
 	else if (m_iTestScenario == 1) {	// Throw spinning boxes
 		Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.04, 0.2));
+		box.color = Vec3(1, 1, 0);
 		box.setForce(Vec3(0, -m_fGravity, 0));
 		box.setLinearVelocity(Vec3(-10, 0, 0));
 		box.setAngularVelocity(Vec3(0, 80, 0));
@@ -379,6 +451,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 	
 	else if (m_iTestScenario == 2) {	// Stack boxes to make a tower
 		Rigidbody box = Rigidbody(&m_SimulationParameters, 1, Vec3(0, 2, 0), Vec3(0.0), Vec3(1, 0.1, 1));
+		box.color = Vec3(1, 1, 0);
 		box.setForce(Vec3(0, -m_fGravity, 0));
 		box.setAngularVelocity(Vec3(0, 80, 0));
 		m_vRigidbodies.push_back(box);
@@ -386,7 +459,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 
 	else if (m_iTestScenario == 3) {	// For angry birds
 		Rigidbody bird = Rigidbody(&m_SimulationParameters, 1, Vec3(-3, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2));
-		bird.color = Vec3(0.8);
+		bird.color = Vec3(1, 1, 0);
 		bird.setForce(Vec3(0, -m_fGravity, 0));
 		bird.setLinearVelocity(Vec3(10, 2, 0));
 		m_vRigidbodies.push_back(bird);
