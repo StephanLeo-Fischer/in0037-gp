@@ -228,6 +228,7 @@
     <ClCompile Include="..\SimulatorTester\PublicRigidBodiesTests.cpp" />
     <ClCompile Include="CollisionDebugger.h" />
     <ClCompile Include="Rigidbody.cpp" />
+    <ClCompile Include="RigidbodyCannon.cpp" />
     <ClCompile Include="RigidBodySystemSimulator.cpp" />
     <ClCompile Include="SpringStructure.cpp" />
     <ClCompile Include="TemplateSimulator.cpp" />
@@ -238,6 +239,7 @@
     <ClInclude Include="collisionDetect.h" />
     <ClInclude Include="Rigidbody.h" />
     <ClInclude Include="DrawingUtilitiesClass.h" />
+    <ClInclude Include="RigidbodyCannon.h" />
     <ClInclude Include="RigidBodySystemSimulator.h" />
     <ClInclude Include="Simulator.h" />
     <ClInclude Include="SpringStructure.h" />

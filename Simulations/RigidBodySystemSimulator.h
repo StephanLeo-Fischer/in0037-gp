@@ -5,6 +5,8 @@
 //add your header for your rigid body system, for e.g.,
 #include "Rigidbody.h"
 #include "SpringStructure.h"
+#include "RigidbodyCannon.h"
+
 #include "collisionDetect.h"
 #include "CollisionDebugger.h"
 
@@ -58,6 +60,7 @@ private:
 	// even if we add or remove some elements in this vector:
 	vector<Rigidbody*> m_vRigidbodies;
 	vector<SpringStructure> m_vSpringStructures;
+	RigidbodyCannon cannon;
 
 	// Set of parameters used for the simulation, that can be changed in the UI:
 	SimulationParameters m_SimulationParameters;

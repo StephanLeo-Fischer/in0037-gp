@@ -3,7 +3,7 @@
 extern Simulator* g_pSimulator;
 extern float g_fTimestep;
 
-RigidBodySystemSimulator::RigidBodySystemSimulator() {
+RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(3, 10) {
 	// UI Attributes
 	m_prevmouse = { 0, 0 };
 	m_bMousePressed = false;
@@ -27,6 +27,12 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() {
 
 	m_SimulationParameters.sqMinimumLinearVelocity = 0.06;
 	m_SimulationParameters.sqMinimumAngularVelocity = 0.1;
+
+	cannon.addBezierPoint(Vec3(-3, 0, -1));
+	cannon.addBezierPoint(Vec3(6, 0, -2));
+	cannon.addBezierPoint(Vec3(6, 0, 2));
+	cannon.addBezierPoint(Vec3(-3, 0, 1));
+	cannon.computeBezierCurve();
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -57,7 +63,7 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 
 		TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "min=0");
 
-		TwAddVarRW(DUC->g_pTweakBar, "Fire scenario", TW_TYPE_INT32, &m_iTestScenario, "min=0 max=4");
+		TwAddVarRW(DUC->g_pTweakBar, "Fire scenario", TW_TYPE_INT32, &m_iTestScenario, "min=0 max=5");
 		TwAddButton(DUC->g_pTweakBar, "Fire Rigidbody", [](void* s) { ((RigidBodySystemSimulator*)g_pSimulator)->fireRigidbody(); }, nullptr, "");
 		
 		TwType TW_TYPE_METHOD;
@@ -92,8 +98,11 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
 		if (m_iTestCase == SPRINGS_DEMO)
 			for (auto& s : m_vSpringStructures)
 				s.drawSprings(DUC);
+
+		// Draw the cannon:
+		cannon.draw(DUC);
 	}
-	
+
 	Sleep(1);
 }
 
@@ -108,6 +117,9 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 	// Then we can clear these two vectors:
 	m_vRigidbodies.clear();
 	m_vSpringStructures.clear();
+
+	// Also reset the cannon position:
+	cannon.reset();
 
 	switch (m_iTestCase)
 	{
@@ -137,6 +149,8 @@ void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed){}
 
 void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 	// update current setup for each frame
+	cannon.update(timestep);
+
 	switch (m_iTestCase)
 	{
 	case SPRINGS_DEMO:
@@ -425,14 +439,20 @@ void RigidBodySystemSimulator::fireRigidbody()
 {
 	// Use different scenarios to test the simulator in different situations:
 	
-	if (m_iTestScenario == 0) {	// Small objects with no velocity
+	if (m_iTestScenario == 0) {		// Fire rigidbodies from the cannon
+		Rigidbody* bullet = cannon.fireRigidbody(&m_SimulationParameters);
+		bullet->addForce(Vec3(0, -m_fGravity, 0));
+		m_vRigidbodies.push_back(bullet);
+	}
+
+	else if (m_iTestScenario == 1) {	// Small objects with no velocity
 		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
 		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(box);
 	}
 
-	else if (m_iTestScenario == 1) {	// Throw spinning boxes
+	else if (m_iTestScenario == 2) {	// Throw spinning boxes
 		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.04, 0.2));
 		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
@@ -441,7 +461,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 		m_vRigidbodies.push_back(box);
 	}
 	
-	else if (m_iTestScenario == 2) {	// Stack boxes to make a tower
+	else if (m_iTestScenario == 3) {	// Stack boxes to make a tower
 		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, 2, 0), Vec3(0.0), Vec3(1, 0.1, 1));
 		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
@@ -449,7 +469,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 		m_vRigidbodies.push_back(box);
 	}
 
-	else if (m_iTestScenario == 3) {	// For angry birds
+	else if (m_iTestScenario == 4) {	// For angry birds
 		Rigidbody* bird = new Rigidbody(&m_SimulationParameters, 1, Vec3(-3, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2));
 		bird->color = Vec3(1, 1, 0);
 		bird->setForce(Vec3(0, -m_fGravity, 0));
@@ -457,7 +477,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 		m_vRigidbodies.push_back(bird);
 	}
 
-	else if (m_iTestScenario == 4) {	// Throw boxes without velocity above the origin
+	else if (m_iTestScenario == 5) {	// Throw boxes without velocity above the origin
 		Vec3 position(0.4 * randFloat(eng) - 0.2, 5, 0.4 * randFloat(eng) - 0.2);
 		Vec3 rotation(90 * randFloat(eng), 90 * randFloat(eng), 90 * randFloat(eng));
 
