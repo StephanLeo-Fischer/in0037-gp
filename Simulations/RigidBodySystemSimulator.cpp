@@ -28,11 +28,12 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(3, 10) {
 	m_SimulationParameters.sqMinimumLinearVelocity = 0.06;
 	m_SimulationParameters.sqMinimumAngularVelocity = 0.1;
 
-	cannon.addBezierPoint(Vec3(-3, 0, -1));
-	cannon.addBezierPoint(Vec3(6, 0, -2));
-	cannon.addBezierPoint(Vec3(6, 0, 2));
-	cannon.addBezierPoint(Vec3(-3, 0, 1));
-	cannon.computeBezierCurve();
+	cannon.addBezierPoint(Vec3(-3, 0, 0), Vec3(0, 0, -1));
+	cannon.addBezierPoint(Vec3(0, 0, -1), Vec3(1, 0, 0));
+	cannon.addBezierPoint(Vec3(3, 0, 0), Vec3(0, 0, 1));
+	cannon.addBezierPoint(Vec3(0, 0, 2), Vec3(0, 0, 1));
+	cannon.addBezierPoint(Vec3(-2, 0, 2), Vec3(0, 0, -1));
+	cannon.addBezierPoint(Vec3(-3, 0, 0), Vec3(0, 0, -1));
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {

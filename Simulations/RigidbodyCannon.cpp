@@ -2,17 +2,13 @@
 
 RigidbodyCannon::RigidbodyCannon(double startTime, double stopTime) :
 	color(0.2),
-	currentTime(0), startTime(startTime), stopTime(stopTime), 
-	binomialCoefficients(NULL) {
+	currentTime(0), startTime(startTime), stopTime(stopTime) {
 
 	// Create the cannon model:
 	cannonBasis.initScaling(0.5, 0.05, 0.5);
 	createTransform(0, 0.15, 0, 0, 0, 0, 0.1, 0.3, 0.1, &cannonPillar);
 	createTransform(0, 0.3, 0, 70, 0, 0, 0.15, 0.4, 0.15, &cannonBody);
 	createTransform(0, 0.279, -0.057, 70, 0, 0, 0.2, 0.2, 0.2, &cannonBack);
-
-	// Reset the transform of the cannon:
-	updateTransform(0);
 }
 
 void RigidbodyCannon::draw(DrawingUtilitiesClass* DUC)
@@ -35,8 +31,8 @@ void RigidbodyCannon::draw(DrawingUtilitiesClass* DUC)
 	double angle;
 	Vec3 current;
 	Vec3 previous = bezierPoints[0];
-	for (int i = 1; i <= 20; i++) {
-		bezier(i / 20.0f, &current, NULL);
+	for (int i = 1; i <= 100; i++) {
+		bezier(i / 100.0f, &current, NULL);
 
 		DUC->drawLine(previous, lineColor, current, lineColor);
 		previous = current;
@@ -66,12 +62,9 @@ Rigidbody* RigidbodyCannon::fireRigidbody(SimulationParameters* params)
 	return bullet;
 }
 
-void RigidbodyCannon::addBezierPoint(Vec3 point) {
+void RigidbodyCannon::addBezierPoint(Vec3 point, Vec3 derivative) {
 	bezierPoints.push_back(point);
-}
-
-void RigidbodyCannon::computeBezierCurve() {
-	computeBinomialCoefficients(bezierPoints.size() - 1);
+	bezierDerivatives.push_back(derivative);
 }
 
 void RigidbodyCannon::updateTransform(double t) {
@@ -95,36 +88,33 @@ void RigidbodyCannon::updateTransform(double t) {
 	fireDirection = Vec3(cos(angle)*cos(fireAngle), sin(fireAngle), sin(angle) * cos(fireAngle));
 }
 
-void RigidbodyCannon::computeBinomialCoefficients(int n) {
-
-	// Create an array containing zeros:
-	binomialCoefficients = new int[n + 1]();
-	binomialCoefficients[0] = 1;
-
-	for (int i = 1; i <= n; i++)
-		for (int j = i; j > 0; j--)
-			binomialCoefficients[j] += binomialCoefficients[j - 1];
-}
-
-void RigidbodyCannon::bezier(double t, Vec3* position, double* angle)
-{
+void RigidbodyCannon::bezier(double t, Vec3* position, double* angle) {
 	int n = bezierPoints.size() - 1;
+	int i = min((int) (t * n), n-1);
+	t = n * t - i;
+
+	// Create a bezier curve between these 4 points:
+	Vec3 points[] = {bezierPoints[i], bezierPoints[i] + bezierDerivatives[i],
+					bezierPoints[i+1] - bezierDerivatives[i+1], bezierPoints[i + 1]};
+
+	// Binomial coefficients used to compute the bezier curve:
+	int binom[] = { 1, 3, 3, 1 };
 
 	if (position != NULL) {
 		// Compute the position on the bezierCurve:
 		*position = 0;
-		for (int k = 0; k <= n; k++) {
-			double factor = binomialCoefficients[k] * pow(t, k) * pow(1 - t, n - k);
-			*position += factor * bezierPoints[k];
+		for (int k = 0; k <= 3; k++) {
+			double factor = binom[k] * pow(t, k) * pow(1 - t, 3 - k);
+			*position += factor * points[k];
 		}
 	}
 
 	if (angle != NULL) {
 		// Compute the derivative of the curve:
 		Vec3 derivative = 0.0;
-		for (int k = 0; k < n; k++) {
-			double factor = (k + 1) * binomialCoefficients[k + 1] * pow(t, k) * pow(1 - t, n - k - 1);
-			derivative += factor * (bezierPoints[k + 1] - bezierPoints[k]);
+		for (int k = 0; k < 3; k++) {
+			double factor = (k + 1) * binom[k + 1] * pow(t, k) * pow(1 - t, 2 - k);
+			derivative += factor * (points[k + 1] - points[k]);
 		}
 
 		// Ignore the part of the derivative along the y-axis:
