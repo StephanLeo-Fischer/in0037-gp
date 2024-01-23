@@ -3,7 +3,7 @@
 extern Simulator* g_pSimulator;
 extern float g_fTimestep;
 
-RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(3, 10) {
+RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(1, 15) {
 	// UI Attributes
 	m_prevmouse = { 0, 0 };
 	m_bMousePressed = false;
@@ -25,15 +25,15 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(3, 10) {
 	m_SimulationParameters.maxLinearCorrectionSpeed = 0.2;
 	m_SimulationParameters.maxAngularCorrectionSpeed = 0.3;
 
-	m_SimulationParameters.sqMinimumLinearVelocity = 0.06;
+	m_SimulationParameters.sqMinimumLinearVelocity = 0.215;
 	m_SimulationParameters.sqMinimumAngularVelocity = 0.1;
 
-	cannon.addBezierPoint(Vec3(-3, 0, 0), Vec3(0, 0, -1));
-	cannon.addBezierPoint(Vec3(0, 0, -1), Vec3(1, 0, 0));
-	cannon.addBezierPoint(Vec3(3, 0, 0), Vec3(0, 0, 1));
-	cannon.addBezierPoint(Vec3(0, 0, 2), Vec3(0, 0, 1));
-	cannon.addBezierPoint(Vec3(-2, 0, 2), Vec3(0, 0, -1));
-	cannon.addBezierPoint(Vec3(-3, 0, 0), Vec3(0, 0, -1));
+	cannon.addBezierPoint(Vec3(-4, 0, -4), Vec3(1, 0, 0));
+	cannon.addBezierPoint(Vec3(1, 0, -4),  Vec3(1, 0, 0));
+	cannon.addBezierPoint(Vec3(3, 0, -2),  Vec3(0, 0, 1));
+	cannon.addBezierPoint(Vec3(3, 0, 2),   Vec3(0, 0, 1));
+	cannon.addBezierPoint(Vec3(1, 0, 4),   Vec3(-1, 0, 0));
+	cannon.addBezierPoint(Vec3(-3, 0, 1), Vec3(0, 0, -1));
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -96,9 +96,9 @@ void RigidBodySystemSimulator::drawFrame(ID3D11DeviceContext* pd3dImmediateConte
 		for (Rigidbody* r : m_vRigidbodies)
 			r->draw(DUC, m_iDebugLine);
 
-		if (m_iTestCase == SPRINGS_DEMO)
-			for (auto& s : m_vSpringStructures)
-				s.drawSprings(DUC);
+		// Draw the springs from the spring structures:
+		for (auto& s : m_vSpringStructures)
+			s.drawSprings(DUC);
 
 		// Draw the cannon:
 		cannon.draw(DUC);
@@ -155,11 +155,11 @@ void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 	switch (m_iTestCase)
 	{
 	case SPRINGS_DEMO:
+	case TEST_DEMO:
+	case ANGRY_BIRDS_DEMO:
 		for (auto& s : m_vSpringStructures)
 			s.updateForces();
 
-	case TEST_DEMO:
-	case ANGRY_BIRDS_DEMO:
 		for (Rigidbody* r : m_vRigidbodies)
 			r->timestepEuler(timestep);
 
@@ -265,6 +265,117 @@ void RigidBodySystemSimulator::setupTestDemo()
 }
 
 void RigidBodySystemSimulator::setupAngryBirdsDemo() {
+
+	// Instantiate the kinematic parts of the scene:
+	const Vec3 kinematicPos[] = { 
+		Vec3(0, -0.05, 0), Vec3(-4, 0.75, -2), Vec3(-3.25, 0.75, -2), Vec3(-2.6, 0.35, -2),
+		Vec3(-0.6, 1, -1), Vec3(-0.6, 1.95, -1.35), Vec3(-0.6, 1.95, -1.7), Vec3(0.4, 0.5, -2.6),
+		Vec3(1.6, 0.5, -2.6), Vec3(1.6, 0.5, -1.4), Vec3(0.4, 0.5, -1.4), Vec3(1.5, 1, -0.5), 
+		Vec3(1.5, 1, 2), Vec3(1.5, 2.05, 0.75) };
+
+	const Vec3 kinematicScale[] = {
+		Vec3(10, 0.1, 10), Vec3(0.1, 1.5, 0.6), Vec3(1.4, 0.1, 0.6), Vec3(0.1, 0.7, 0.6),
+		Vec3(0.1, 2, 0.1), Vec3(0.1, 0.1, 0.8), Vec3(1.0, 0.1, 0.6), Vec3(0.1, 1, 0.1),
+		Vec3(0.1, 1, 0.1), Vec3(0.1, 1, 0.1), Vec3(0.1, 1, 0.1), Vec3(0.1, 2, 0.1), 
+		Vec3(0.1, 2, 0.1), Vec3(0.1, 0.1, 2.6)	};
+	
+	const int KINEMATIC_COUNT = sizeof(kinematicPos) / sizeof(Vec3);	// = 14
+	for (int i = 0; i < KINEMATIC_COUNT; i++) {
+		Rigidbody* kinematic = new Rigidbody(&m_SimulationParameters, 1, kinematicPos[i], 0.0, kinematicScale[i]);
+		kinematic->setKinematic(true);
+		m_vRigidbodies.push_back(kinematic);
+	}
+
+	// Instantiate the planks:
+	const Vec3 planksPos[] = {
+		Vec3(-3.45, 1.55, -2), Vec3(-2.9, 1.15, -2), Vec3(-1.5, 0.4, -2), Vec3(-2.05, 0.85, -2),
+		Vec3(-3.8, 1.8, -2), Vec3(-3.45, 2.05, -2), Vec3(-3.1, 1.8, -2), Vec3(-0.95, 0.2, -2),
+		Vec3(-0.6, 0.45, -2), Vec3(-0.25, 0.2, -2), Vec3(0, 0.4, 1.45), Vec3(0, 0.9, 0.75),
+		Vec3(0, 0.4, 0.05), Vec3(0, 1.2, 1.1), Vec3(0, 1.45, 0.75), Vec3(0, 1.2, 0.4),
+		Vec3(-0.6, 1.3, -1.7), Vec3(1, 0.4, -2), Vec3(1.5, 1, 0.05), Vec3(1.5, 1, 0.75),
+		Vec3(1.5, 1, 1.45)};
+
+	const Vec3 planksScale[] = {
+			Vec3(1.2, 0.1, 0.6), Vec3(0.1, 0.7, 0.6), Vec3(0.1, 0.8, 0.6), Vec3(1.2, 0.1, 0.6),
+			Vec3(0.1, 0.4, 0.6), Vec3(1.0, 0.1, 0.6), Vec3(0.1, 0.4, 0.6), Vec3(0.1, 0.4, 0.6),
+			Vec3(1.0, 0.1, 0.6), Vec3(0.1, 0.4, 0.6), Vec3(0.6, 0.8, 0.2), Vec3(0.6, 0.2, 2.0),
+			Vec3(0.6, 0.8, 0.2), Vec3(0.6, 0.4, 0.1), Vec3(0.6, 0.1, 1.0), Vec3(0.6, 0.4, 0.1),
+			Vec3(0.8, 0.1, 0.4), Vec3(1.0, 0.1, 1.0), Vec3(0.05, 1.5, 0.4), Vec3(0.05, 1.5, 0.4), 
+			Vec3(0.05, 1.5, 0.4) };
+
+	const int PLANKS_COUNT = sizeof(planksPos) / sizeof(Vec3);		// = 21
+	for (int i = 0; i < PLANKS_COUNT; i++) {
+		Rigidbody* plank = new Rigidbody(&m_SimulationParameters, 1, planksPos[i], 0.0, planksScale[i]);
+		plank->color = Vec3(120, 57, 0) / 255.0f;
+		plank->setForce(Vec3(0, -m_fGravity, 0));
+		m_vRigidbodies.push_back(plank);
+	}
+
+	// Instantiate the piggies:
+	const Vec3 piggiesPos[] = {
+		Vec3(-3.7, 0.9, -2), Vec3(-3.2, 0.9, -2), Vec3(-3.45, 1.7, -2), Vec3(-3.45, 2.2, -2),
+		Vec3(-2.3, 1, -2), Vec3(-1.8, 1, -2), Vec3(-2, 0.1, -2), Vec3(-0.6, 0.6, -2),
+		Vec3(1, 1.2, -2), Vec3(-0.6, 1.45, -1.7), Vec3(0, 1.6, 0.75) };
+
+	const int PIGGIES_COUNT = sizeof(piggiesPos) / sizeof(Vec3);		// = 11
+	for (int i = 0; i < PIGGIES_COUNT; i++) {
+		Rigidbody* pig = new Rigidbody(&m_SimulationParameters, 1, piggiesPos[i], 0.0, Vec3(0.2));
+		pig->color = Vec3(0, 120, 0) / 255.0f;
+		pig->setForce(Vec3(0, -m_fGravity, 0));
+		m_vRigidbodies.push_back(pig);
+	}
+
+	// Instantiate the spring structures:
+	const float SPRINGS_STIFFNESS = 20;
+
+	// First structure: pendulum
+	SpringStructure structure = SpringStructure();
+	structure.setExternalForce(Vec3(0, -m_fGravity, 0));
+	structure.addRigidbody(m_vRigidbodies[6]);						// kinematic[6]
+	structure.addRigidbody(m_vRigidbodies[KINEMATIC_COUNT + 16]);	// plank[16]
+	
+	float initialLength = 0.4;
+	structure.addSpring(0, 1, Vec3(-0.5, -0.5, -0.5), Vec3(-0.5, 0.5, -0.5), initialLength, SPRINGS_STIFFNESS);
+	structure.addSpring(0, 1, Vec3(-0.5, -0.5, +0.5), Vec3(-0.5, 0.5, +0.5), initialLength, SPRINGS_STIFFNESS);
+	structure.addSpring(0, 1, Vec3(+0.5, -0.5, -0.5), Vec3(+0.5, 0.5, -0.5), initialLength, SPRINGS_STIFFNESS);
+	structure.addSpring(0, 1, Vec3(+0.5, -0.5, +0.5), Vec3(+0.5, 0.5, +0.5), initialLength, SPRINGS_STIFFNESS);
+
+	m_vSpringStructures.push_back(structure);
+
+	// Second structure: trampoline
+	structure = SpringStructure();
+	structure.setExternalForce(Vec3(0, -m_fGravity, 0));
+	structure.addRigidbody(m_vRigidbodies[KINEMATIC_COUNT + 17]);	// plank[17]
+	structure.addRigidbody(m_vRigidbodies[7]);						// kinematic[7]
+	structure.addRigidbody(m_vRigidbodies[8]);						// kinematic[8]
+	structure.addRigidbody(m_vRigidbodies[9]);						// kinematic[9]
+	structure.addRigidbody(m_vRigidbodies[10]);						// kinematic[10]
+
+	structure.addSpring(0, 1, Vec3(-0.5, 0.5, -0.5), Vec3(0, 0.5, 0), initialLength, SPRINGS_STIFFNESS);
+	structure.addSpring(0, 2, Vec3(+0.5, 0.5, -0.5), Vec3(0, 0.5, 0), initialLength, SPRINGS_STIFFNESS);
+	structure.addSpring(0, 3, Vec3(+0.5, 0.5, +0.5), Vec3(0, 0.5, 0), initialLength, SPRINGS_STIFFNESS);
+	structure.addSpring(0, 4, Vec3(-0.5, 0.5, +0.5), Vec3(0, 0.5, 0), initialLength, SPRINGS_STIFFNESS);
+
+	m_vSpringStructures.push_back(structure);
+
+	// Third structure: wall of planks:
+	structure = SpringStructure();
+	structure.setExternalForce(Vec3(0, -m_fGravity, 0));
+	structure.addRigidbody(m_vRigidbodies[13]);						// kinematic[13]
+	structure.addRigidbody(m_vRigidbodies[KINEMATIC_COUNT + 18]);	// plank[18]
+	structure.addRigidbody(m_vRigidbodies[KINEMATIC_COUNT + 19]);	// plank[19]
+	structure.addRigidbody(m_vRigidbodies[KINEMATIC_COUNT + 20]);	// plank[20]
+
+	initialLength = 0.05;
+	structure.addSpring(0, 1, Vec3(0, 0, -0.27), Vec3(0, 0.5, 0), initialLength, 40);
+	structure.addSpring(0, 2, Vec3(0.0), Vec3(0, 0.5, 0), initialLength, 40);
+	structure.addSpring(0, 3, Vec3(0, 0, +0.27), Vec3(0, 0.5, 0), initialLength, 40);
+	
+	m_vSpringStructures.push_back(structure);
+}
+
+/* OLD VERSION :
+void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	Rigidbody* ground = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground->setKinematic(true);
 	m_vRigidbodies.push_back(ground);
@@ -311,7 +422,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 		pigs[i]->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(pigs[i]);
 	}
-}
+}*/
 
 void RigidBodySystemSimulator::setupSpringsDemo()
 {
