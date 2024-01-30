@@ -21,9 +21,11 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(1, 15) {
 	m_SimulationParameters.objectFriction = 0.015;
 
 	m_SimulationParameters.minimumImpulse = 0.05;
+	m_SimulationParameters.minFramesBeforeIdle = 10;
 
 	m_SimulationParameters.maxLinearCorrectionSpeed = 0.2;
 	m_SimulationParameters.maxAngularCorrectionSpeed = 0.3;
+	m_SimulationParameters.depthTarget = 0.01;
 
 	m_SimulationParameters.sqMinimumLinearVelocity = 0.215;
 	m_SimulationParameters.sqMinimumAngularVelocity = 0.1;
@@ -57,8 +59,11 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		TwAddVarRW(DUC->g_pTweakBar, "Air friction", TW_TYPE_DOUBLE, &m_SimulationParameters.airFriction, "min=0 max=0.5 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Objects friction", TW_TYPE_DOUBLE, &m_SimulationParameters.objectFriction, "min=0 max=0.5 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Minimum impulse", TW_TYPE_DOUBLE, &m_SimulationParameters.minimumImpulse, "min=0 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Min Frames before Idle", TW_TYPE_INT32, &m_SimulationParameters.minFramesBeforeIdle, "min=0");
 		TwAddVarRW(DUC->g_pTweakBar, "Max Linear correction speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxLinearCorrectionSpeed, "min=0 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Max Angular correction speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxAngularCorrectionSpeed, "min=0 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Depth target", TW_TYPE_DOUBLE, &m_SimulationParameters.depthTarget, "min=0 step=0.01");
+
 		TwAddVarRW(DUC->g_pTweakBar, "Min Linear velocity", TW_TYPE_DOUBLE, &m_SimulationParameters.sqMinimumLinearVelocity, "min=0 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Min Angular velocity", TW_TYPE_DOUBLE, &m_SimulationParameters.sqMinimumAngularVelocity, "min=0 step=0.001");
 
@@ -472,6 +477,7 @@ void RigidBodySystemSimulator::setupSpringsDemo()
 	m_vSpringStructures.push_back(structure);
 }
 
+/*
 void RigidBodySystemSimulator::manageCollisions(double timestep)
 {
 	// First, find the collisions between all the rigidbodies:
@@ -498,9 +504,8 @@ void RigidBodySystemSimulator::manageCollisions(double timestep)
 		}
 	}
 
-	// Recompute which rigidbodies are in idle state or not. A rigidbody 
-	// can stay in idle state only if all the rigidbodies colliding it 
-	// are also in idle state:
+	// Recompute which rigidbodies are in idle state or not. As soon as the set of colliding objects
+	// of a rigidbody changes, all the colliding objects should loose their idle state:
 	for (Rigidbody* r : m_vRigidbodies)
 		r->checkKeepIdleState();
 
@@ -515,7 +520,7 @@ void RigidBodySystemSimulator::manageCollisions(double timestep)
 		}
 	}
 
-	// Check which rigidbodies are still moving after the impulse:
+	// Check which rigidbodies are moving after the impulse:
 	for (Rigidbody* r : m_vRigidbodies)
 		r->checkIsMooving();
 
@@ -525,6 +530,69 @@ void RigidBodySystemSimulator::manageCollisions(double timestep)
 	// Finally, update the colliders of the rigidbodies:
 	for (Rigidbody* r : m_vRigidbodies)
 		r->updateColliders();
+}*/
+
+void RigidBodySystemSimulator::manageCollisions(double timestep)
+{
+	// First, find the collisions between all the rigidbodies:
+	vector<Collision> collisions;
+	for (int i = 0; i < m_vRigidbodies.size(); i++) {
+		for (int j = i + 1; j < m_vRigidbodies.size(); j++) {
+			Rigidbody* r1 = m_vRigidbodies[i];
+			Rigidbody* r2 = m_vRigidbodies[j];
+
+			// If both objects are idle, we don't need to recompute the 
+			// collision between them (it will be the same that in 
+			// the previous frame) !
+			if (r1->isIdle() && r2->isIdle())
+				continue;
+
+			// Else, we compute the collision between the two objects:
+			CollisionInfo collision = Rigidbody::computeCollision(r1, r2);
+
+			if (collision.isValid) {
+				collisions.push_back(Collision(i, j, collision));
+				r1->addCollider(r2);
+				r2->addCollider(r1);
+			}
+		}
+	}
+
+	// As soon as the state of a rigidbody changes, then all of the colliding objects should exit the idle state:
+	std::unordered_set<Rigidbody*> visited;
+
+	for (Rigidbody* r : m_vRigidbodies) {
+		if (visited.count(r) == 0 && r->hasChangedState()) {
+			std::unordered_set<Rigidbody*> neighborhood;
+			r->getFullNeighborhood(&neighborhood);
+
+			for (Rigidbody* n : neighborhood) {
+				n->exitIdleState();
+				visited.insert(n);
+			}
+		}
+	}
+
+	// Now we can compute the impulse of each collision:
+	for (int i = 0; i < collisions.size(); i++) {
+		Rigidbody* r1 = m_vRigidbodies[collisions[i].i1];
+		Rigidbody* r2 = m_vRigidbodies[collisions[i].i2];
+
+		manageCollision(r1, r2, &collisions[i], timestep);
+	}
+
+	// Check which rigidbodies are moving after the impulse:
+	for (Rigidbody* r : m_vRigidbodies)
+		r->checkIsMooving();
+
+	// Update the idle state of the objects, depending on if they are mooving or not:
+	for (Rigidbody* r : m_vRigidbodies)
+		r->checkIdleState();
+
+	// Finally, update the colliders of the rigidbodies:
+	for (Rigidbody* r : m_vRigidbodies)
+		r->nextFrame();
+	cout << endl;
 }
 
 void RigidBodySystemSimulator::manageCollision(Rigidbody* r1, Rigidbody* r2, const Collision* collision, double timestep)
@@ -590,11 +658,11 @@ void RigidBodySystemSimulator::fireRigidbody()
 	}
 
 	else if (m_iTestScenario == 5) {	// Throw boxes without velocity above the origin
-		Vec3 position(0.4 * randFloat(eng) - 0.2, 5, 0.4 * randFloat(eng) - 0.2);
-		Vec3 rotation(90 * randFloat(eng), 90 * randFloat(eng), 90 * randFloat(eng));
+		//Vec3 position(0.4 * randFloat(eng) - 0.2, 5, 0.4 * randFloat(eng) - 0.2);
+		//Vec3 rotation(90 * randFloat(eng), 90 * randFloat(eng), 90 * randFloat(eng));
 
-		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, position, rotation, Vec3(0.5));
-		box->color = Vec3(0, 0, 1);
+		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, 2, 0), 0.0, Vec3(1, 0.5, 1));
+		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(box);
 	}

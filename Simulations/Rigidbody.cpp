@@ -19,6 +19,9 @@ Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Q
 	m_bIsIdle(false),
 	m_bAllowIdleState(true),
 	m_bIsMooving(true),
+	m_bStateChanged(false),
+
+	m_iRemainingFramesBeforeIdle(params->minFramesBeforeIdle),
 
 	m_vLinearVelocity(0.0),
 	m_vAngularVelocity(0.0),
@@ -108,40 +111,19 @@ void Rigidbody::addTorque(Vec3 location, Vec3 force) {
 		this->m_vTorques.push_back(torque);
 	}
 }
-
 void Rigidbody::addForce(Vec3 force) {
 	// If the object is kinematic, ignore the forces applied to it:
 	if(!m_bIsKinematic)
 		this->m_vSumForces += force;
 }
-
 void Rigidbody::setForce(Vec3 force) {
 	// If the object is kinematic, ignore the forces applied to it:
 	if (!m_bIsKinematic)
 		this->m_vSumForces = force;
 }
-
 void Rigidbody::clearForces() {
 	this->m_vTorques.clear();
 	this->m_vSumForces = Vec3(0, 0, 0);
-}
-
-void Rigidbody::addCollider(Rigidbody* rigidbody) {
-	m_vCurrColliders.push_back(rigidbody);
-}
-
-void Rigidbody::updateColliders() {
-	m_vPrevColliders = m_vCurrColliders;
-	m_vCurrColliders.clear();
-
-	// Testing: we know that idle objects are not moving. Thus,
-	// the collisions between idle objects will be the same in
-	// the next frame. We don't need to recompute them !
-	if (m_bIsIdle) {
-		for (auto& c : m_vPrevColliders)
-			if (c->m_bIsIdle)
-				m_vCurrColliders.push_back(c);
-	}
 }
 
 double Rigidbody::getMass() const { return m_fMass; }
@@ -198,9 +180,10 @@ void Rigidbody::setKinematic(bool isKinematic) {
 	}
 }
 bool Rigidbody::isKinematic() const { return m_bIsKinematic; }
-
 bool Rigidbody::isIdle() const { return m_bIsIdle; }
 
+// Use this function to prevent objects from going in idle state (this is used for 
+// spring structures for example):
 void Rigidbody::allowIdleState(bool allow) {
 	m_bAllowIdleState = allow;
 
@@ -208,17 +191,8 @@ void Rigidbody::allowIdleState(bool allow) {
 		m_bIsIdle = false;
 }
 
-void Rigidbody::exitIdleState()
-{
-	// Kinematic objects are always in idle state, and shouldn't be affected by this function
-	// For non kinematic object, changing their idle state will also change the state of all
-	// the rigidbodies colliding this object:
-	if (!m_bIsKinematic && m_bIsIdle) {
-		m_bIsIdle = false;
-
-		for (auto& r : m_vCurrColliders)
-			r->exitIdleState();
-	}
+void Rigidbody::addCollider(Rigidbody* rigidbody) {
+	m_vCurrColliders.push_back(rigidbody);
 }
 
 void Rigidbody::checkIsMooving() {
@@ -265,59 +239,100 @@ inline Vec3 Rigidbody::forward() const {
 	return Vec3(m_mTransformMatrix.value[2][0], m_mTransformMatrix.value[2][1], m_mTransformMatrix.value[2][2]);
 }
 
+// This is used by Spring Structures:
 Vec3 Rigidbody::transformLocalToGlobal(Vec3 localPosition) {
 	return m_mTransformMatrix.transformVector(localPosition);
 }
 
-// A rigidbody can stay in idle state only if all the rigidbodies colliding it are also in idle state.
-// The rigidbody also looses immediately this state if the set of colliding objects has changed
-// since the last frame:
-void Rigidbody::checkKeepIdleState()
+bool Rigidbody::hasChangedState()
 {
-	// As soon as one colliding object is not in idle state, this object also looses its idle state.
-	// If we are already not in idle state, there is nothing to do:
-	if (m_bIsIdle) {
-		for (int i = 0; i < m_vCurrColliders.size(); i++) {
-			if (!m_vCurrColliders[i]->m_bIsIdle) {
-				exitIdleState();
+	// If the object is kinematic, its state cannot change:
+	if (m_bIsKinematic)
+		return false;
+
+	// If the state has changed, return true:
+	if (m_bStateChanged)
+		return true;
+
+	// Else, check if the set of colliding objects have changed, compared to the previous frame.
+	// If this is the case, update the state:
+	if (m_vCurrColliders.size() != m_vPrevColliders.size())
+		m_bStateChanged = true;
+	else {
+		sort(m_vPrevColliders.begin(), m_vPrevColliders.end());
+		sort(m_vCurrColliders.begin(), m_vCurrColliders.end());
+
+		if (m_vPrevColliders != m_vCurrColliders)
+			m_bStateChanged = true;
+	}
+
+	return m_bStateChanged;
+}
+
+void Rigidbody::getFullNeighborhood(std::unordered_set<Rigidbody*>* target)
+{
+	target->insert(this);
+
+	for (Rigidbody* r : m_vCurrColliders) {
+		if (!r->m_bIsKinematic && target->count(r) == 0)
+			r->getFullNeighborhood(target);
+	}
+}
+
+void Rigidbody::exitIdleState() {
+	// Kinematic objects are always in idle state, and shouldn't be affected by this function:
+	if (!m_bIsKinematic) {
+		m_bIsIdle = false;
+		m_iRemainingFramesBeforeIdle = m_pParams->minFramesBeforeIdle;
+	}
+}
+
+void Rigidbody::checkIdleState() {
+	if (m_bIsKinematic)
+		return;
+
+	if (m_bIsMooving) {
+		m_bIsIdle = false;
+		m_iRemainingFramesBeforeIdle = m_pParams->minFramesBeforeIdle;
+	}
+	else if (m_bAllowIdleState && !m_bIsIdle) {
+		// If any of the rigidbodies colliding this one is mooving, we cannot enter the idle state:
+		for (auto& r : m_vCurrColliders)
+			if (r->m_bIsMooving)
 				return;
-			}
-		}
 
-		// We also loose the idle state if the set of colliders has changed:
-		if (m_vCurrColliders.size() != m_vPrevColliders.size())
-			exitIdleState();
-		else {
-			sort(m_vPrevColliders.begin(), m_vPrevColliders.end());
-			sort(m_vCurrColliders.begin(), m_vCurrColliders.end());
-
-			if (m_vPrevColliders != m_vCurrColliders)
-				exitIdleState();
+		// Else, if this rigidbody, and all its neighbours aren't mooving:
+		if (--m_iRemainingFramesBeforeIdle <= 0) {
+			m_bIsIdle = true;
+			m_vLinearVelocity = 0;
+			m_vAngularVelocity = 0;
+			m_vAngularMomentum = 0;
 		}
 	}
 }
 
-void Rigidbody::checkEnterIdleState() {
-	// We can enter idle state if this rigidbody, and all the colliding rigidbodies 
-	// have a small velocity:
+void Rigidbody::nextFrame() {
 
-	if (m_bIsIdle || !m_bAllowIdleState)
-		return;
+	// DEBUG: Remove this !
+	cout << "Rigidbody@" << this << ": [";
+	for (Rigidbody* r : m_vCurrColliders)
+		cout << r << " ";
+	cout << "]" << endl;
 
-	if (m_bIsMooving) {
-		m_iRemainingFramesBeforeIdle = 5;
-		return;
-	}
+	// Reset state changed:
+	m_bStateChanged = false;
 
-	for (auto& r : m_vCurrColliders)
-		if (r->m_bIsMooving)
-			return;
+	// Update the colliders of the object:
+	m_vPrevColliders = m_vCurrColliders;
+	m_vCurrColliders.clear();
 
-	if (--m_iRemainingFramesBeforeIdle <= 0) {
-		m_bIsIdle = true;
-		m_vLinearVelocity = 0;
-		m_vAngularVelocity = 0;
-		m_vAngularMomentum = 0;
+	// We know that idle objects aren't moving. Thus, the
+	// collisions between idle objects will be the same in
+	// the next frame. We don't need to recompute them !
+	if (m_bIsIdle) {
+		for (auto& c : m_vPrevColliders)
+			if (c->m_bIsIdle)
+				m_vCurrColliders.push_back(c);
 	}
 }
 
@@ -546,6 +561,12 @@ void Rigidbody::correctPosition(Rigidbody* r, const SimulationParameters* params
 	// For the angular velocity, the friction should be applied to the normal part:
 	velocityAlongNormal = dot(r->m_vAngularVelocity, n1) * n1;
 	r->m_vAngularVelocity = (1-params->objectFriction) * velocityAlongNormal + (r->m_vAngularVelocity - velocityAlongNormal);
+
+	// If the collision depth is small enough, then we don't need any correction:
+	if (collisionDepth < params->depthTarget)
+		return;
+
+	collisionDepth -= params->depthTarget;
 
 	double dot_n1_n2 = dot(n1, n2);
 

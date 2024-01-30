@@ -1,5 +1,7 @@
 #ifndef RIGIDBODY_h
 #define RIGIDBODY_h
+#include <unordered_set>
+
 #include "Simulator.h"
 #include "collisionDetect.h"
 
@@ -19,6 +21,9 @@ struct SimulationParameters {
 	// If the impulse is lower than this value, we will also use position correction on the rigidbody:
 	double minimumImpulse;
 
+	// Minimum number of frames an immobile object has to wait before going into idle state:
+	int minFramesBeforeIdle;
+
 	// When two rigidbodies are in each other, if the impulse is not big enough,
 	// we may have to update directly the position of the rigidbodies (instead of the speed),
 	// to manage the intersection. However, the changes shouldn't be too big (we don't want
@@ -26,6 +31,11 @@ struct SimulationParameters {
 	// angular correction speed:
 	double maxLinearCorrectionSpeed;
 	double maxAngularCorrectionSpeed;
+
+	// When correcting the position of rigidbodies, we still want objects to keep colliding (if we are at the
+	// limit between collision, and no collision, the state of the colliding objects will always change, which
+	// is bad). The depthTarget is the target value of the collision depth between colliding objects (should be small):
+	double depthTarget;
 
 	// If the linear and angular velocities of a rigidbody is below these values, this 
 	// object can go in idle state. In this state, the rigidbody stops beign updated, 
@@ -54,12 +64,6 @@ public:
 	void setForce(Vec3 force);
 	void clearForces();
 
-	// Add a new rigidbody to the list of rigidbodies colliding this one
-	void addCollider(Rigidbody* rigidbody);
-
-	// Clear current colliders, set prev to current:
-	void updateColliders();
-
 	// Add some getters and setters:
 	double getMass() const;
 	void setMass(double mass);
@@ -79,14 +83,6 @@ public:
 	void setKinematic(bool isKinematic);
 	bool isKinematic() const;
 
-	bool isIdle() const;
-
-	void allowIdleState(bool allow);
-
-	void exitIdleState();
-
-	void checkIsMooving();
-
 	Vec3 getLinearVelocity() const;
 	void setLinearVelocity(Vec3 linearVelocity);
 
@@ -103,11 +99,33 @@ public:
 
 	Vec3 transformLocalToGlobal(Vec3 localPosition);
 
-	// Check if the rigidbody can stay in idle state:
-	void checkKeepIdleState();
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Functions about idle state of rigidbodies:
 
-	// Check if the rigidbody can enter the idle state:
-	void checkEnterIdleState();
+	bool isIdle() const;
+
+	// Add a new rigidbody to the list of rigidbodies colliding this one
+	void addCollider(Rigidbody* rigidbody);
+
+	void allowIdleState(bool allow);
+
+	void exitIdleState();
+
+	void checkIsMooving();
+
+
+	// New functions:
+	bool hasChangedState();
+
+	// Get all the objects colliding this rigidbody, but also the objects colliding them, etc...
+	void getFullNeighborhood(std::unordered_set<Rigidbody*>* target);
+
+	void checkIdleState();
+
+	void nextFrame();
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	static CollisionInfo computeCollision(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB);
 
@@ -166,8 +184,12 @@ private:
 	// If the velocity of the rigidbody is above the thresholds defined in the simulation parameters:
 	bool m_bIsMooving;
 
-	// TESTING:
-	int m_iRemainingFramesBeforeIdle = 10;
+	// This flag becomes true if the state of the rigidbody has changed since the last frame. This is
+	// the case when the set of colliding objects have changed fo example:
+	bool m_bStateChanged;
+
+	// Number of frames this object still has to wait before being able to go in idle state:
+	int m_iRemainingFramesBeforeIdle;
 
 	// List of the rigidbodies that were colliding this object in the previous and current frame:
 	vector<Rigidbody*> m_vPrevColliders;
