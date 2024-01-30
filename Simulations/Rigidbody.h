@@ -46,14 +46,17 @@ struct SimulationParameters {
 
 class Rigidbody {
 public:
+	// Name of the rigidbody (used for debug):
+	const string name;
+
 	// Color of the rigidbody (used for drawing)
 	Vec3 color;
 
 	// Create a rigidbody with an orientation using Euler angles (in degrees):
-	Rigidbody(SimulationParameters* params, double mass, Vec3 position, Vec3 rotation, Vec3 scale);
+	Rigidbody(string name, SimulationParameters* params, double mass, Vec3 position, Vec3 rotation, Vec3 scale);
 
 	// Create a rigidbody with an orientation defined with a quaternion:
-	Rigidbody(SimulationParameters* params, double mass, Vec3 position, Quat rotation, Vec3 scale);
+	Rigidbody(string name, SimulationParameters* params, double mass, Vec3 position, Quat rotation, Vec3 scale);
 
 	void draw(DrawingUtilitiesClass * DUC, int debugLine) const;
 

@@ -55,7 +55,7 @@ void RigidbodyCannon::reset() {
 
 Rigidbody* RigidbodyCannon::fireRigidbody(SimulationParameters* params)
 {
-	Rigidbody* bullet = new Rigidbody(params, 1, fireCenter, Vec3(0.0), Vec3(0.1));
+	Rigidbody* bullet = new Rigidbody("Cannon_bullet", params, 1, fireCenter, Vec3(0.0), Vec3(0.1));
 	bullet->setLinearVelocity(10 * fireDirection);
 	bullet->color = Vec3(1, 0, 0);
 

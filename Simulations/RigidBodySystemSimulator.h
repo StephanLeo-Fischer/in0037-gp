@@ -96,8 +96,19 @@ private:
 	void setupAngryBirdsDemo();
 	void setupSpringsDemo();
 	
+	// Manage all the collisions in the scene:
 	void manageCollisions(double timestep);
+
+	// Manage the collision between two rigidbodies, given the collision information between them:
 	void manageCollision(Rigidbody* r1, Rigidbody* r2, const Collision* collision, double timestep);
+
+	// Compute for each rigidbody, their distance from the nearest kinematic object: the kinematic objects
+	// have a level of 0, the objects colliding kinematic objects have a level of 1, etc...
+	// This is used to correct the position of the objects in the right order (ex: for a tower, we should correct
+	// the position of the objects from the bottom to the top, otherwise each object will be pushed down):
+	void computeRigidbodiesLevel();
+
+	// Fire a new rigidbody in the scene:
 	void fireRigidbody();
 };
 #endif

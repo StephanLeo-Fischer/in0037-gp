@@ -4,10 +4,11 @@
 #define RADIANS(deg) (deg * M_PI / 180)
 #define DEGREES(rad) (rad * 180 / M_PI)
 
-Rigidbody::Rigidbody(SimulationParameters * params, double mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
-	Rigidbody(params, mass, position, Quat(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)), scale) {}
+Rigidbody::Rigidbody(string name, SimulationParameters * params, double mass, Vec3 position, Vec3 rotation, Vec3 scale) : 
+	Rigidbody(name, params, mass, position, Quat(RADIANS(rotation.x), RADIANS(rotation.y), RADIANS(rotation.z)), scale) {}
 
-Rigidbody::Rigidbody(SimulationParameters* params, double mass, Vec3 position, Quat rotation, Vec3 scale) :
+Rigidbody::Rigidbody(string name, SimulationParameters* params, double mass, Vec3 position, Quat rotation, Vec3 scale) :
+	name(name),
 	m_pParams(params),
 	m_fMass(mass),
 	m_vPosition(position),
@@ -314,9 +315,9 @@ void Rigidbody::checkIdleState() {
 void Rigidbody::nextFrame() {
 
 	// DEBUG: Remove this !
-	cout << "Rigidbody@" << this << ": [";
+	cout << name << ": Colliders = [";
 	for (Rigidbody* r : m_vCurrColliders)
-		cout << r << " ";
+		cout << r->name << " ";
 	cout << "]" << endl;
 
 	// Reset state changed:

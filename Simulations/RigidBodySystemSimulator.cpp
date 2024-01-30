@@ -250,7 +250,7 @@ void RigidBodySystemSimulator::applyForceOnBody(int i, Vec3 loc, Vec3 force) {
 }
 
 void RigidBodySystemSimulator::addRigidBody(Vec3 position, Vec3 size, int mass) {
-	m_vRigidbodies.push_back(new Rigidbody(&m_SimulationParameters, mass, position, Vec3(0.0), size));
+	m_vRigidbodies.push_back(new Rigidbody("Rigidbody_" + to_string(m_vRigidbodies.size()), &m_SimulationParameters, mass, position, Vec3(0.0), size));
 }
 
 void RigidBodySystemSimulator::setOrientationOf(int i, Quat orientation) {
@@ -264,7 +264,7 @@ void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity) {
 
 void RigidBodySystemSimulator::setupTestDemo()
 {
-	Rigidbody* ground = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	Rigidbody* ground = new Rigidbody("Ground", & m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground->setKinematic(true);
 	m_vRigidbodies.push_back(ground);
 }
@@ -286,7 +286,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	
 	const int KINEMATIC_COUNT = sizeof(kinematicPos) / sizeof(Vec3);	// = 14
 	for (int i = 0; i < KINEMATIC_COUNT; i++) {
-		Rigidbody* kinematic = new Rigidbody(&m_SimulationParameters, 1, kinematicPos[i], 0.0, kinematicScale[i]);
+		Rigidbody* kinematic = new Rigidbody("Ground_" + to_string(i), & m_SimulationParameters, 1, kinematicPos[i], 0.0, kinematicScale[i]);
 		kinematic->setKinematic(true);
 		m_vRigidbodies.push_back(kinematic);
 	}
@@ -310,7 +310,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 	const int PLANKS_COUNT = sizeof(planksPos) / sizeof(Vec3);		// = 21
 	for (int i = 0; i < PLANKS_COUNT; i++) {
-		Rigidbody* plank = new Rigidbody(&m_SimulationParameters, 1, planksPos[i], 0.0, planksScale[i]);
+		Rigidbody* plank = new Rigidbody("Plank_" + to_string(i), & m_SimulationParameters, 1, planksPos[i], 0.0, planksScale[i]);
 		plank->color = Vec3(120, 57, 0) / 255.0f;
 		plank->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(plank);
@@ -324,7 +324,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 	const int PIGGIES_COUNT = sizeof(piggiesPos) / sizeof(Vec3);		// = 11
 	for (int i = 0; i < PIGGIES_COUNT; i++) {
-		Rigidbody* pig = new Rigidbody(&m_SimulationParameters, 1, piggiesPos[i], 0.0, Vec3(0.2));
+		Rigidbody* pig = new Rigidbody("Pig_" + to_string(i), & m_SimulationParameters, 1, piggiesPos[i], 0.0, Vec3(0.2));
 		pig->color = Vec3(0, 120, 0) / 255.0f;
 		pig->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(pig);
@@ -432,20 +432,20 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 void RigidBodySystemSimulator::setupSpringsDemo()
 {
 	// Create the ground:
-	Rigidbody* ground = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
+	Rigidbody* ground = new Rigidbody("Ground", & m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground->setKinematic(true);
 	m_vRigidbodies.push_back(ground);
 
 	// Create the platform:
-	Rigidbody* platform = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, 1.5, 0), Vec3(20, 45, 10), Vec3(2.4, 0.1, 2.4));
+	Rigidbody* platform = new Rigidbody("Platform", & m_SimulationParameters, 1, Vec3(0, 1.5, 0), Vec3(20, 45, 10), Vec3(2.4, 0.1, 2.4));
 	platform->color = Vec3(120, 57, 0) / 255.0f;
 	m_vRigidbodies.push_back(platform);
 
 	// Create pillars:
-	Rigidbody* pillar1 = new Rigidbody(&m_SimulationParameters, 1, Vec3(-1.5, 1, -1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
-	Rigidbody* pillar2 = new Rigidbody(&m_SimulationParameters, 1, Vec3(-1.5, 1, +1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
-	Rigidbody* pillar3 = new Rigidbody(&m_SimulationParameters, 1, Vec3(+1.5, 1, -1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
-	Rigidbody* pillar4 = new Rigidbody(&m_SimulationParameters, 1, Vec3(+1.5, 1, +1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
+	Rigidbody* pillar1 = new Rigidbody("Pillar 1", & m_SimulationParameters, 1, Vec3(-1.5, 1, -1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
+	Rigidbody* pillar2 = new Rigidbody("Pillar 2", &m_SimulationParameters, 1, Vec3(-1.5, 1, +1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
+	Rigidbody* pillar3 = new Rigidbody("Pillar 3", &m_SimulationParameters, 1, Vec3(+1.5, 1, -1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
+	Rigidbody* pillar4 = new Rigidbody("Pillar 4", &m_SimulationParameters, 1, Vec3(+1.5, 1, +1.5), Vec3(0, 0, 0), Vec3(0.1, 2, 0.1));
 
 	pillar1->setKinematic(true);
 	pillar2->setKinematic(true);
@@ -615,6 +615,11 @@ void RigidBodySystemSimulator::manageCollision(Rigidbody* r1, Rigidbody* r2, con
 	}
 }
 
+void RigidBodySystemSimulator::computeRigidbodiesLevel()
+{
+
+}
+
 void RigidBodySystemSimulator::fireRigidbody()
 {
 	// Use different scenarios to test the simulator in different situations:
@@ -626,14 +631,14 @@ void RigidBodySystemSimulator::fireRigidbody()
 	}
 
 	else if (m_iTestScenario == 1) {	// Small objects with no velocity
-		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
+		Rigidbody* box = new Rigidbody("Box_" + to_string(m_vRigidbodies.size()), &m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(10, 45, 10), Vec3(0.04, 0.1, 0.02));
 		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(box);
 	}
 
 	else if (m_iTestScenario == 2) {	// Throw spinning boxes
-		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.04, 0.2));
+		Rigidbody* box = new Rigidbody("Box_" + to_string(m_vRigidbodies.size()), &m_SimulationParameters, 1, Vec3(0.5, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.04, 0.2));
 		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
 		box->setLinearVelocity(Vec3(-10, 0, 0));
@@ -642,7 +647,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 	}
 	
 	else if (m_iTestScenario == 3) {	// Stack boxes to make a tower
-		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, 2, 0), Vec3(0.0), Vec3(1, 0.1, 1));
+		Rigidbody* box = new Rigidbody("Box_" + to_string(m_vRigidbodies.size()), &m_SimulationParameters, 1, Vec3(0, 2, 0), Vec3(0.0), Vec3(1, 0.1, 1));
 		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
 		box->setAngularVelocity(Vec3(0, 80, 0));
@@ -650,7 +655,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 	}
 
 	else if (m_iTestScenario == 4) {	// For angry birds
-		Rigidbody* bird = new Rigidbody(&m_SimulationParameters, 1, Vec3(-3, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2));
+		Rigidbody* bird = new Rigidbody("Box_" + to_string(m_vRigidbodies.size()), &m_SimulationParameters, 1, Vec3(-3, 0.5, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2));
 		bird->color = Vec3(1, 1, 0);
 		bird->setForce(Vec3(0, -m_fGravity, 0));
 		bird->setLinearVelocity(Vec3(10, 2, 0));
@@ -661,7 +666,7 @@ void RigidBodySystemSimulator::fireRigidbody()
 		//Vec3 position(0.4 * randFloat(eng) - 0.2, 5, 0.4 * randFloat(eng) - 0.2);
 		//Vec3 rotation(90 * randFloat(eng), 90 * randFloat(eng), 90 * randFloat(eng));
 
-		Rigidbody* box = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, 2, 0), 0.0, Vec3(1, 0.5, 1));
+		Rigidbody* box = new Rigidbody("Box_" + to_string(m_vRigidbodies.size()), &m_SimulationParameters, 1, Vec3(0, 2, 0), 0.0, Vec3(1, 0.5, 1));
 		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(box);
