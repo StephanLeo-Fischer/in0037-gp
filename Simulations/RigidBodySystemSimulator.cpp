@@ -33,11 +33,11 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(1, 15) {
 	m_SimulationParameters.sqMinimumAngularVelocity = 0.035;
 
 	cannon.addBezierPoint(Vec3(-4, 0, -4), Vec3(1, 0, 0));
-	cannon.addBezierPoint(Vec3(1, 0, -4),  Vec3(1, 0, 0));
-	cannon.addBezierPoint(Vec3(3, 0, -2),  Vec3(0, 0, 1));
-	cannon.addBezierPoint(Vec3(3, 0, 2),   Vec3(0, 0, 1));
-	cannon.addBezierPoint(Vec3(1, 0, 4),   Vec3(-1, 0, 0));
-	cannon.addBezierPoint(Vec3(-3, 0, 1), Vec3(0, 0, -1));
+	cannon.addBezierPoint(Vec3(2, 0, -4),  Vec3(1, 0, 0));
+	cannon.addBezierPoint(Vec3(4, 0, -2),  Vec3(0, 0, 1));
+	cannon.addBezierPoint(Vec3(4, 0, 2),   Vec3(0, 0, 1));
+	cannon.addBezierPoint(Vec3(2, 0, 4),   Vec3(-1, 0, 0));
+	cannon.addBezierPoint(Vec3(-3, 0, 1), Vec3(-1, 0, -1));
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
@@ -157,7 +157,17 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed){}
 
 void RigidBodySystemSimulator::simulateTimestep(float timestep) {
-	// update current setup for each frame
+
+	// Update the orientation of the cannon according to key presses:
+	if (DXUTIsKeyDown(0x46))		// If the key 'F' is pressed
+		fireRigidbody();
+	
+	if (DXUTIsKeyDown(VK_UP))
+		cannon.RotateUp();
+	if (DXUTIsKeyDown(VK_DOWN))
+		cannon.RotateDown();
+
+	// Update the position of the cannon:
 	cannon.update(timestep);
 
 	switch (m_iTestCase)
@@ -273,23 +283,33 @@ void RigidBodySystemSimulator::setupTestDemo()
 }
 
 void RigidBodySystemSimulator::setupAngryBirdsDemo() {
+	// Use this vector to move all the scene:
+	const Vec3 scenePosition = Vec3(1, 0, 0);
+
+	// Create the ground (no matter the scene position):
+	Rigidbody* ground = new Rigidbody("Ground_0", &m_SimulationParameters, 1,
+		Vec3(0, -0.05, 0), 0.0, Vec3(10, 0.1, 10));
+	ground->setKinematic(true);
+	m_vRigidbodies.push_back(ground);
+
 
 	// Instantiate the kinematic parts of the scene:
 	const Vec3 kinematicPos[] = { 
-		Vec3(0, -0.05, 0), Vec3(-4, 0.75, -2), Vec3(-3.25, 0.75, -2), Vec3(-2.6, 0.35, -2),
+		Vec3(-4, 0.75, -2), Vec3(-3.25, 0.75, -2), Vec3(-2.6, 0.35, -2),
 		Vec3(-0.6, 1, -1), Vec3(-0.6, 1.95, -1.35), Vec3(-0.6, 1.95, -1.7), Vec3(0.4, 0.5, -2.6),
 		Vec3(1.6, 0.5, -2.6), Vec3(1.6, 0.5, -1.4), Vec3(0.4, 0.5, -1.4), Vec3(1.5, 1, -0.5), 
 		Vec3(1.5, 1, 2), Vec3(1.5, 2.05, 0.75) };
 
 	const Vec3 kinematicScale[] = {
-		Vec3(10, 0.1, 10), Vec3(0.1, 1.5, 0.6), Vec3(1.4, 0.1, 0.6), Vec3(0.1, 0.7, 0.6),
+		Vec3(0.1, 1.5, 0.6), Vec3(1.4, 0.1, 0.6), Vec3(0.1, 0.7, 0.6),
 		Vec3(0.1, 2, 0.1), Vec3(0.1, 0.1, 0.8), Vec3(1.0, 0.1, 0.6), Vec3(0.1, 1, 0.1),
 		Vec3(0.1, 1, 0.1), Vec3(0.1, 1, 0.1), Vec3(0.1, 1, 0.1), Vec3(0.1, 2, 0.1), 
 		Vec3(0.1, 2, 0.1), Vec3(0.1, 0.1, 2.6)	};
 	
-	const int KINEMATIC_COUNT = sizeof(kinematicPos) / sizeof(Vec3);	// = 14
-	for (int i = 0; i < KINEMATIC_COUNT; i++) {
-		Rigidbody* kinematic = new Rigidbody("Ground_" + to_string(i), & m_SimulationParameters, 1, kinematicPos[i], 0.0, kinematicScale[i]);
+	const int KINEMATIC_COUNT = 1 + sizeof(kinematicPos) / sizeof(Vec3);	// = 14
+	for (int i = 0; i < KINEMATIC_COUNT-1; i++) {
+		Rigidbody* kinematic = new Rigidbody("Ground_" + to_string(i+1), & m_SimulationParameters, 1, 
+			scenePosition + kinematicPos[i], 0.0, kinematicScale[i]);
 		kinematic->setKinematic(true);
 		m_vRigidbodies.push_back(kinematic);
 	}
@@ -313,7 +333,8 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 	const int PLANKS_COUNT = sizeof(planksPos) / sizeof(Vec3);		// = 21
 	for (int i = 0; i < PLANKS_COUNT; i++) {
-		Rigidbody* plank = new Rigidbody("Plank_" + to_string(i), & m_SimulationParameters, 1, planksPos[i], 0.0, planksScale[i]);
+		Rigidbody* plank = new Rigidbody("Plank_" + to_string(i), & m_SimulationParameters, 1, 
+			scenePosition + planksPos[i], 0.0, planksScale[i]);
 		plank->color = Vec3(120, 57, 0) / 255.0f;
 		plank->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(plank);
@@ -327,7 +348,8 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 	const int PIGGIES_COUNT = sizeof(piggiesPos) / sizeof(Vec3);		// = 11
 	for (int i = 0; i < PIGGIES_COUNT; i++) {
-		Rigidbody* pig = new Rigidbody("Pig_" + to_string(i), & m_SimulationParameters, 1, piggiesPos[i], 0.0, Vec3(0.2));
+		Rigidbody* pig = new Rigidbody("Pig_" + to_string(i), & m_SimulationParameters, 1, 
+			scenePosition + piggiesPos[i], 0.0, Vec3(0.2));
 		pig->color = Vec3(0, 120, 0) / 255.0f;
 		pig->setForce(Vec3(0, -m_fGravity, 0));
 		m_vRigidbodies.push_back(pig);
@@ -674,8 +696,10 @@ void RigidBodySystemSimulator::fireRigidbody()
 	
 	if (m_iTestScenario == 0) {		// Fire rigidbodies from the cannon
 		Rigidbody* bullet = cannon.fireRigidbody(&m_SimulationParameters);
-		bullet->addForce(Vec3(0, -m_fGravity, 0));
-		m_vRigidbodies.push_back(bullet);
+		if (bullet != NULL) {
+			bullet->addForce(Vec3(0, -m_fGravity, 0));
+			m_vRigidbodies.push_back(bullet);
+		}		
 	}
 
 	else if (m_iTestScenario == 1) {	// Small objects with no velocity

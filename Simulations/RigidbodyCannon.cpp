@@ -2,7 +2,8 @@
 
 RigidbodyCannon::RigidbodyCannon(double startTime, double stopTime) :
 	color(0.2),
-	currentTime(0), startTime(startTime), stopTime(stopTime) {
+	currentTime(0), startTime(startTime), stopTime(stopTime),
+	m_fLastTimeFire(0), m_fFireAngle(0.35) {
 
 	// Create the cannon model:
 	cannonBasis.initScaling(0.5, 0.05, 0.5);
@@ -15,18 +16,17 @@ void RigidbodyCannon::draw(DrawingUtilitiesClass* DUC)
 {
 	// Draw the cannon:
 	DUC->setUpLighting(Vec3(), 0.4 * Vec3(1, 1, 1), 100, color);
-	DUC->drawRigidBody(cannonBasis * transformMatrix);
-	DUC->drawRigidBody(cannonPillar * transformMatrix);
-	DUC->drawRigidBody(cannonBody * transformMatrix);
-	DUC->drawRigidBody(cannonBack * transformMatrix);
+	DUC->drawRigidBody(cannonBasis * m_mTransformMatrix);
+	DUC->drawRigidBody(cannonPillar * m_mTransformMatrix);
+	DUC->drawRigidBody(cannonBody * m_mTransformMatrix);
+	DUC->drawRigidBody(cannonBack * m_mTransformMatrix);
 
 	// Draw the path followed by the cannon:
 	Vec3 lineColor = Vec3(1, 0, 0);
 
+	// Draw a yellow line in the direction of the cannon:
 	DUC->beginLine();
-
-	// TESTING:
-	DUC->drawLine(fireCenter, Vec3(1, 1, 0), fireCenter + fireDirection, Vec3(1, 1, 0));
+	DUC->drawLine(m_vFireCenter, Vec3(1, 1, 0), m_vFireCenter + m_vFireDirection, Vec3(1, 1, 0));
 
 	double angle;
 	Vec3 current;
@@ -48,18 +48,31 @@ void RigidbodyCannon::update(double timestep) {
 		updateTransform((currentTime - startTime) / (stopTime - startTime));
 }
 
+void RigidbodyCannon::RotateUp() {
+	m_fFireAngle = min(m_fFireAngle + CANNON_ROTATION_SPEED, CANNON_MAX_ANGLE);
+}
+
+void RigidbodyCannon::RotateDown() {
+	m_fFireAngle = max(m_fFireAngle - CANNON_ROTATION_SPEED, CANNON_MIN_ANGLE);
+}
+
 void RigidbodyCannon::reset() {
 	currentTime = 0;
+	m_fLastTimeFire = 0;
 	updateTransform(0);
 }
 
 Rigidbody* RigidbodyCannon::fireRigidbody(SimulationParameters* params)
 {
-	Rigidbody* bullet = new Rigidbody("Cannon_bullet", params, 1, fireCenter, Vec3(0.0), Vec3(0.1));
-	bullet->setLinearVelocity(10 * fireDirection);
-	bullet->color = Vec3(1, 0, 0);
-
-	return bullet;
+	if (currentTime - m_fLastTimeFire > MIN_TIME_BETWEEN_FIRE) {
+		m_fLastTimeFire = currentTime;
+		Rigidbody* bullet = new Rigidbody("Cannon_bullet", params, 1, m_vFireCenter, Vec3(0.0), Vec3(0.1));
+		bullet->setLinearVelocity(10 * m_vFireDirection);
+		bullet->color = Vec3(1, 0, 0);
+		return bullet;
+	}
+	
+	return NULL;
 }
 
 void RigidbodyCannon::addBezierPoint(Vec3 point, Vec3 derivative) {
@@ -78,14 +91,12 @@ void RigidbodyCannon::updateTransform(double t) {
 	Mat4 translation;
 	translation.initTranslation(position.x, position.y, position.z);
 
-	transformMatrix.initRotationY(-angle * 180 / M_PI);
-	transformMatrix *= translation;
-
-	const float fireAngle = 0.35;
+	m_mTransformMatrix.initRotationY(-angle * 180 / M_PI);
+	m_mTransformMatrix *= translation;
 
 	angle += M_PI_2;
-	fireCenter = position + Vec3(0.27 * cos(angle), 0.4, 0.27 * sin(angle));
-	fireDirection = Vec3(cos(angle)*cos(fireAngle), sin(fireAngle), sin(angle) * cos(fireAngle));
+	m_vFireCenter = position + Vec3(0.27 * cos(angle), 0.4, 0.27 * sin(angle));
+	m_vFireDirection = Vec3(cos(angle)*cos(m_fFireAngle), sin(m_fFireAngle), sin(angle) * cos(m_fFireAngle));
 }
 
 void RigidbodyCannon::bezier(double t, Vec3* position, double* angle) {
