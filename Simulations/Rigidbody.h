@@ -32,6 +32,11 @@ struct SimulationParameters {
 	double maxLinearCorrectionSpeed;
 	double maxAngularCorrectionSpeed;
 
+	// When two objects are inside each other, define the maximum speed objects are allowed to collide.
+	// When you have a stack of objects, this prevents the object at the bottom from receiving too big impulses,
+	// by limiting how fast it can be pushed in the ground:
+	double maxCollidingSpeed;
+
 	// When correcting the position of rigidbodies, we still want objects to keep colliding (if we are at the
 	// limit between collision, and no collision, the state of the colliding objects will always change, which
 	// is bad). The depthTarget is the target value of the collision depth between colliding objects (should be small):
@@ -120,12 +125,17 @@ public:
 	// New functions:
 	bool hasChangedState();
 
+	const vector<Rigidbody*>& getCurrentColliders() const;
+
 	// Get all the objects colliding this rigidbody, but also the objects colliding them, etc...
 	void getFullNeighborhood(std::unordered_set<Rigidbody*>* target);
 
 	void checkIdleState();
 
 	void nextFrame();
+
+	void setDistanceToKinematic(int distance);
+	int getDistanceToKinematic() const;
 
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -194,6 +204,9 @@ private:
 	// Number of frames this object still has to wait before being able to go in idle state:
 	int m_iRemainingFramesBeforeIdle;
 
+	// Number of objects between this object and the nearest kinematic one:
+	int m_iDistanceToKinematic;
+
 	// List of the rigidbodies that were colliding this object in the previous and current frame:
 	vector<Rigidbody*> m_vPrevColliders;
 	vector<Rigidbody*> m_vCurrColliders;
@@ -201,7 +214,8 @@ private:
 	Vec3 m_vLinearVelocity;
 	Vec3 m_vAngularVelocity;
 
-	// TESTING:
+	// This is used to have a smoothed version of the angular velocity (this way, 
+	// this is easier to detect immobile objects):
 	Vec3 m_vFilteredAngularVelocity;
 
 	// Rotation and transformation matrices:

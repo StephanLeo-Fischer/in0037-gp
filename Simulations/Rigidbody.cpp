@@ -270,6 +270,11 @@ bool Rigidbody::hasChangedState()
 	return m_bStateChanged;
 }
 
+const vector<Rigidbody*>& Rigidbody::getCurrentColliders() const
+{
+	return m_vCurrColliders;
+}
+
 void Rigidbody::getFullNeighborhood(std::unordered_set<Rigidbody*>* target)
 {
 	target->insert(this);
@@ -314,11 +319,11 @@ void Rigidbody::checkIdleState() {
 
 void Rigidbody::nextFrame() {
 
-	// DEBUG: Remove this !
-	cout << name << ": Colliders = [";
-	for (Rigidbody* r : m_vCurrColliders)
-		cout << r->name << " ";
-	cout << "]" << endl;
+	// Used for debugging: print the list of objects colliding this rigidbody:
+	// cout << name << " (level=" << m_iDistanceToKinematic << "): [";
+	// for (Rigidbody* r : m_vCurrColliders)
+	//	cout << r->name << " ";
+	// cout << "]" << endl;	
 
 	// Reset state changed:
 	m_bStateChanged = false;
@@ -336,6 +341,10 @@ void Rigidbody::nextFrame() {
 				m_vCurrColliders.push_back(c);
 	}
 }
+
+void Rigidbody::setDistanceToKinematic(int distance) { m_iDistanceToKinematic = distance; }
+int Rigidbody::getDistanceToKinematic() const { return m_iDistanceToKinematic; }
+
 
 void Rigidbody::updateInertiaTensors()
 {
@@ -547,7 +556,6 @@ double Rigidbody::computeImpulse(Rigidbody* rigidbodyA, Rigidbody* rigidbodyB, d
 		return J;
 	}
 }
-
 void Rigidbody::correctPosition(Rigidbody* r, const SimulationParameters* params, Vec3 collisionPoint, Vec3 collisionNormal, double collisionDepth, double timestep)
 {
 	Vec3 n1 = collisionNormal;				// Vector from the fixed rigidbody to the given rigidbody
@@ -555,13 +563,13 @@ void Rigidbody::correctPosition(Rigidbody* r, const SimulationParameters* params
 	double rigidbodyHeight = norm(n2);		// Height of the rigidbody along n2
 	n2 /= rigidbodyHeight;
 
-	// Add friction to the part of the linear velocity orthogonal to the normal:
-	Vec3 velocityAlongNormal = dot(r->m_vLinearVelocity, n1) * n1;
-	r->m_vLinearVelocity = velocityAlongNormal + (1-params->objectFriction) * (r->m_vLinearVelocity - velocityAlongNormal);
+	// Add friction to the part of the linear velocity orthogonal to the normal, and limit how fast objects are allowed to collide:
+	double velocityAlongNormal = dot(r->m_vLinearVelocity, n1);
+	r->m_vLinearVelocity = max(-params->maxCollidingSpeed, velocityAlongNormal) * n1 + (1-params->objectFriction) * (r->m_vLinearVelocity - velocityAlongNormal * n1);
 
 	// For the angular velocity, the friction should be applied to the normal part:
-	velocityAlongNormal = dot(r->m_vAngularVelocity, n1) * n1;
-	r->m_vAngularVelocity = (1-params->objectFriction) * velocityAlongNormal + (r->m_vAngularVelocity - velocityAlongNormal);
+	velocityAlongNormal = dot(r->m_vAngularVelocity, n1);
+	r->m_vAngularVelocity = (1-params->objectFriction) * velocityAlongNormal * n1 + (r->m_vAngularVelocity - velocityAlongNormal * n1);
 
 	// If the collision depth is small enough, then we don't need any correction:
 	if (collisionDepth < params->depthTarget)
@@ -574,7 +582,7 @@ void Rigidbody::correctPosition(Rigidbody* r, const SimulationParameters* params
 	// If n1 and n2 are already aligned, we can only play on the position of the rigidbody to
 	// correct the intersection:
 	if (abs(dot_n1_n2 - 1) < 1e-5) {
-		float posCorrection = min(collisionDepth, params->maxLinearCorrectionSpeed * timestep);
+		double posCorrection = min(collisionDepth, params->maxLinearCorrectionSpeed * timestep);
 		r->m_vPosition += posCorrection * n1;
 	}
 

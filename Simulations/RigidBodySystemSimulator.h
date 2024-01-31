@@ -103,10 +103,10 @@ private:
 	void manageCollision(Rigidbody* r1, Rigidbody* r2, const Collision* collision, double timestep);
 
 	// Compute for each rigidbody, their distance from the nearest kinematic object: the kinematic objects
-	// have a level of 0, the objects colliding kinematic objects have a level of 1, etc...
+	// have a distance of 0, the objects colliding kinematic objects have a distance of 1, etc...
 	// This is used to correct the position of the objects in the right order (ex: for a tower, we should correct
 	// the position of the objects from the bottom to the top, otherwise each object will be pushed down):
-	void computeRigidbodiesLevel();
+	void computeDistancesToKinematic();
 
 	// Fire a new rigidbody in the scene:
 	void fireRigidbody();

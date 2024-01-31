@@ -1,4 +1,5 @@
 #include "RigidBodySystemSimulator.h"
+#include <queue>
 
 extern Simulator* g_pSimulator;
 extern float g_fTimestep;
@@ -17,18 +18,19 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(1, 15) {
 	m_SimulationParameters = {};
 	m_SimulationParameters.collisionFactor = 0.2;
 
-	m_SimulationParameters.airFriction = 0.003;
-	m_SimulationParameters.objectFriction = 0.015;
+	m_SimulationParameters.airFriction = 0.008;
+	m_SimulationParameters.objectFriction = 0.01;
 
 	m_SimulationParameters.minimumImpulse = 0.05;
 	m_SimulationParameters.minFramesBeforeIdle = 10;
 
 	m_SimulationParameters.maxLinearCorrectionSpeed = 0.2;
-	m_SimulationParameters.maxAngularCorrectionSpeed = 0.3;
+	m_SimulationParameters.maxAngularCorrectionSpeed = 0.1;
+	m_SimulationParameters.maxCollidingSpeed = 0.2;
 	m_SimulationParameters.depthTarget = 0.01;
 
-	m_SimulationParameters.sqMinimumLinearVelocity = 0.215;
-	m_SimulationParameters.sqMinimumAngularVelocity = 0.1;
+	m_SimulationParameters.sqMinimumLinearVelocity = 0.05;
+	m_SimulationParameters.sqMinimumAngularVelocity = 0.035;
 
 	cannon.addBezierPoint(Vec3(-4, 0, -4), Vec3(1, 0, 0));
 	cannon.addBezierPoint(Vec3(1, 0, -4),  Vec3(1, 0, 0));
@@ -62,7 +64,8 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		TwAddVarRW(DUC->g_pTweakBar, "Min Frames before Idle", TW_TYPE_INT32, &m_SimulationParameters.minFramesBeforeIdle, "min=0");
 		TwAddVarRW(DUC->g_pTweakBar, "Max Linear correction speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxLinearCorrectionSpeed, "min=0 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Max Angular correction speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxAngularCorrectionSpeed, "min=0 step=0.01");
-		TwAddVarRW(DUC->g_pTweakBar, "Depth target", TW_TYPE_DOUBLE, &m_SimulationParameters.depthTarget, "min=0 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Max collision speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxCollidingSpeed, "min=0 step=0.01");
+		TwAddVarRW(DUC->g_pTweakBar, "Depth target", TW_TYPE_DOUBLE, &m_SimulationParameters.depthTarget, "min=0 step=0.001");
 
 		TwAddVarRW(DUC->g_pTweakBar, "Min Linear velocity", TW_TYPE_DOUBLE, &m_SimulationParameters.sqMinimumLinearVelocity, "min=0 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Min Angular velocity", TW_TYPE_DOUBLE, &m_SimulationParameters.sqMinimumAngularVelocity, "min=0 step=0.001");
@@ -558,9 +561,12 @@ void RigidBodySystemSimulator::manageCollisions(double timestep)
 		}
 	}
 
+	// Then, use the previous calculated collisions to compute the distance of each rigidbody
+	// from a kinematic object (we will use this distance to correct positions in the right order):
+	computeDistancesToKinematic();
+
 	// As soon as the state of a rigidbody changes, then all of the colliding objects should exit the idle state:
 	std::unordered_set<Rigidbody*> visited;
-
 	for (Rigidbody* r : m_vRigidbodies) {
 		if (visited.count(r) == 0 && r->hasChangedState()) {
 			std::unordered_set<Rigidbody*> neighborhood;
@@ -592,7 +598,6 @@ void RigidBodySystemSimulator::manageCollisions(double timestep)
 	// Finally, update the colliders of the rigidbodies:
 	for (Rigidbody* r : m_vRigidbodies)
 		r->nextFrame();
-	cout << endl;
 }
 
 void RigidBodySystemSimulator::manageCollision(Rigidbody* r1, Rigidbody* r2, const Collision* collision, double timestep)
@@ -601,23 +606,66 @@ void RigidBodySystemSimulator::manageCollision(Rigidbody* r1, Rigidbody* r2, con
 		collision->collisionPoint, collision->collisionNormal);
 
 	if (J < m_SimulationParameters.minimumImpulse) {
-		if (!r1->isKinematic() && !r2->isKinematic())
+		int d1 = r1->getDistanceToKinematic();
+		int d2 = r2->getDistanceToKinematic();
+
+		// If both objects have the same distance to a kinematic object, then we have to correct
+		// both of them (depending on their mass):
+		if (d1 == d2)
 			Rigidbody::correctPosition(r1, r2, &m_SimulationParameters, collision->collisionPoint, 
 				-collision->collisionNormal, collision->collisionDepth, timestep);
 
-		else if (!r1->isKinematic())
+		// Else, if r2 is the nearest to a kinematic object, we can assume its position as correct,
+		// and thus only move r1 (this way, for a tower, all the blocks will be pushed up, instead
+		// of making the correction crush the tower):
+		else if (d1 > d2)
 			Rigidbody::correctPosition(r1, &m_SimulationParameters, collision->collisionPoint, 
 				collision->collisionNormal, collision->collisionDepth, timestep);
 
-		else if (!r2->isKinematic())
+		// Finally, if r1 is the nearset to a kinematic object, we have to move r2:
+		else
 			Rigidbody::correctPosition(r2, &m_SimulationParameters, collision->collisionPoint, 
 				-collision->collisionNormal, collision->collisionDepth, timestep);
 	}
 }
 
-void RigidBodySystemSimulator::computeRigidbodiesLevel()
-{
+void RigidBodySystemSimulator::computeDistancesToKinematic() {
+	std::unordered_set<Rigidbody*> visited;
+	std::queue<Rigidbody*> fifo;
 
+	// First, all the kinematic objects should have a distance to kinematic equal to zero:
+	for (Rigidbody* r : m_vRigidbodies) {
+		if (r->isKinematic()) {
+			r->setDistanceToKinematic(0);
+			fifo.push(r);
+			visited.insert(r);
+		}
+	}
+
+	// Then, compute the distances for the other rigidbodies, using the BFS algorithm:
+	int maxDistance = 0;
+
+	while (!fifo.empty()) {
+		Rigidbody* current = fifo.front();	// Pop the first element from the FIFO
+		fifo.pop();
+
+		// Get all the neighbors of the current node:
+		for (Rigidbody* collider : current->getCurrentColliders()) {
+			if (visited.count(collider) == 0) {
+				maxDistance = current->getDistanceToKinematic() + 1;
+				collider->setDistanceToKinematic(maxDistance);
+				visited.insert(collider);
+				fifo.push(collider);
+			}
+		}
+	}
+
+	// Label the remaining rigidbodies (that are thus not connected to kinematic objects)
+	// with the maximumDistance + 1:
+	maxDistance++;
+	for (Rigidbody* r : m_vRigidbodies)
+		if (visited.count(r) == 0)
+			r->setDistanceToKinematic(maxDistance);
 }
 
 void RigidBodySystemSimulator::fireRigidbody()
