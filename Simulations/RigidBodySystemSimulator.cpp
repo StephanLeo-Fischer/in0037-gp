@@ -411,28 +411,35 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 	float circleSize = 1.5f;
 	int circlePartsAmount = 7;
+	// corners (RBs)
 	for (int i = 0; i < circlePartsAmount; i++) {
 		float curX = cos(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
 		float curY = sin(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
 
-		// corners (RBs)
 		Rigidbody* circlePart = new Rigidbody("RubberBallPart_" + to_string(i), &m_SimulationParameters,
 			1, // mass
 			Vec3(curX, curY + 3, 0),  // pos   // the +3 is just for some initial falling height. can be adjusted
 			Vec3(0, 0, 0),  // rot
 			Vec3(0.5, 0.5, 0.5));  // scale
-		circlePart->color = Vec3(0.6, 0.27, 0.03);
-
+		//circlePart->color = Vec3(0.6, 0.27, 0.03);
+		m_vRigidbodies.push_back(circlePart);
 		structure.addRigidbody(circlePart);
-		//circlePart->setForce(Vec3(0, -m_fGravity, 0));
-		//circlePart.setLinearVelocity(Vec3(0, -0.2, 0));
-		//m_vRigidbodies.push_back(circlePart);
-		//std::cout << "rb mit" << curX << endl;
-
-		// springs
-
-
 	}
+	// middle holder
+	Rigidbody* middleHolder = new Rigidbody("RubberBallMiddle", &m_SimulationParameters,
+		1, // mass
+		Vec3(0, 0 + 3, 0),  // pos   // the +3 is just for some initial falling height. can be adjusted
+		Vec3(0, 0, 0),  // rot
+		Vec3(0.5, 0.5, 0.5)
+	);  // scale
+	m_vRigidbodies.push_back(middleHolder);
+	structure.addRigidbody(middleHolder);
+	// springs
+	for (int i = 0; i < circlePartsAmount; i++) {
+		structure.addSpring(i, (i+1)%circlePartsAmount, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, 40);
+		structure.addSpring(circlePartsAmount, i, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, 40);  // middle holder
+	}
+	m_vSpringStructures.push_back(structure);
 }
 
 /* OLD VERSION :
