@@ -406,17 +406,19 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 
 
-	// Daniel added: rubber ball
+	// Daniel added: rubber ball / maybe ring of death
 	structure = SpringStructure();
-	structure.setExternalForce(Vec3(0, -m_fGravity /3, 0));
+	structure.setExternalForce(Vec3(m_fGravity * 3, 0, 0));
 
 	float circleSize = 0.5;  // radius
-	int circlePartsAmount = 12;
-	int springStrength = 150;
-	float offsetX = -2.5;
-	float offsetY = 3;
+	int circlePartsAmount = 10;
+	int springStrength = 40;
+	float offsetX = -3.5;
+	float offsetY = 1;
+	float offsetZ = 0;
 	int mass = 1;
-	Vec3 scale = Vec3(0.1, 0.1, 0.1);
+	float possibleSinglePartSize = circleSize * 2 / circlePartsAmount;
+	Vec3 scale = Vec3(possibleSinglePartSize, possibleSinglePartSize * 2, possibleSinglePartSize);
 	// corners (RBs)
 	for (int i = 0; i < circlePartsAmount; i++) {
 		float curX = cos(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
@@ -424,7 +426,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 		Rigidbody* circlePart = new Rigidbody("RubberBallPart_" + to_string(i), &m_SimulationParameters,
 			mass, // mass
-			Vec3(curX + offsetX, curY + offsetY, 0),  // pos   // the +3 is just for some initial falling height. can be adjusted
+			Vec3(curX + offsetX, 0 + offsetY, curY + offsetZ),  // pos   // the +3 is just for some initial falling height. can be adjusted
 			Vec3(0, 0, 0),  // rot
 			scale
 		);
@@ -436,7 +438,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	// middle holder
 	Rigidbody* middleHolder = new Rigidbody("RubberBallMiddle", &m_SimulationParameters,
 		mass, // mass
-		Vec3(0 + offsetX, 0 + offsetY, 0),  // pos   // the +3 is just for some initial falling height. can be adjusted
+		Vec3(0 + offsetX, 0 + offsetY, 0 + offsetZ),  // pos   // the +3 is just for some initial falling height. can be adjusted
 		Vec3(0, 0, 0),  // rot
 		scale
 	);  
@@ -446,7 +448,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	// side holders
 	Rigidbody* sideHolderFront = new Rigidbody("RubberBallMiddle", &m_SimulationParameters,
 		mass, // mass
-		Vec3(0 + offsetX, 0 + offsetY, circleSize * 3),  // pos   // the +3 is just for some initial falling height. can be adjusted
+		Vec3(0 + offsetX, 0 + offsetY, circleSize + offsetZ),  // pos   // the +3 is just for some initial falling height. can be adjusted
 		Vec3(0, 0, 0),  // rot
 		scale
 	);  
@@ -455,7 +457,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	structure.addRigidbody(sideHolderFront);
 	Rigidbody* sideHolderBack = new Rigidbody("RubberBallMiddle", &m_SimulationParameters,
 		mass, // mass
-		Vec3(0 + offsetX, 0 + offsetY, -circleSize * 3),  // pos   // the +3 is just for some initial falling height. can be adjusted
+		Vec3(0 + offsetX, 0 + offsetY, -circleSize + offsetZ),  // pos   // the +3 is just for some initial falling height. can be adjusted
 		Vec3(0, 0, 0),  // rot
 		scale
 	);
