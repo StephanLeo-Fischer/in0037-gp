@@ -405,16 +405,18 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 
 
+
 	// Daniel added: rubber ball
 	structure = SpringStructure();
 	structure.setExternalForce(Vec3(0, -m_fGravity /3, 0));
 
-	float circleSize = 1.5f;
-	int circlePartsAmount = 8;
-	int springStrength = 200;
+	float circleSize = 0.5;
+	int circlePartsAmount = 12;
+	int springStrength = 100;
 	float offsetX = -2.5;
-	float offsetY = 5;
+	float offsetY = 3;
 	int mass = 1;
+	Vec3 scale = Vec3(0.1, 0.1, 0.1);
 	// corners (RBs)
 	for (int i = 0; i < circlePartsAmount; i++) {
 		float curX = cos(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
@@ -424,24 +426,52 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 			mass, // mass
 			Vec3(curX + offsetX, curY + offsetY, 0),  // pos   // the +3 is just for some initial falling height. can be adjusted
 			Vec3(0, 0, 0),  // rot
-			Vec3(0.5, 0.5, 1.5));  // scale
+			scale
+		);
 		//circlePart->color = Vec3(0.6, 0.27, 0.03);
 		m_vRigidbodies.push_back(circlePart);
 		structure.addRigidbody(circlePart);
 	}
+	/*
 	// middle holder
 	Rigidbody* middleHolder = new Rigidbody("RubberBallMiddle", &m_SimulationParameters,
 		mass, // mass
 		Vec3(0 + offsetX, 0 + offsetY, 0),  // pos   // the +3 is just for some initial falling height. can be adjusted
 		Vec3(0, 0, 0),  // rot
-		Vec3(0.5, 0.5, 0.5)
-	);  // scale
+		scale
+	);  
 	m_vRigidbodies.push_back(middleHolder);
 	structure.addRigidbody(middleHolder);
+	
+	// side holders
+	Rigidbody* sideHolderFront = new Rigidbody("RubberBallMiddle", &m_SimulationParameters,
+		mass, // mass
+		Vec3(0 + offsetX, 0 + offsetY, circleSize * 3),  // pos   // the +3 is just for some initial falling height. can be adjusted
+		Vec3(0, 0, 0),  // rot
+		scale
+	);  
+	m_vRigidbodies.push_back(sideHolderFront);
+	structure.addSpring(circlePartsAmount + 1, circlePartsAmount, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);
+	structure.addRigidbody(sideHolderFront);
+	Rigidbody* sideHolderBack = new Rigidbody("RubberBallMiddle", &m_SimulationParameters,
+		mass, // mass
+		Vec3(0 + offsetX, 0 + offsetY, -circleSize * 3),  // pos   // the +3 is just for some initial falling height. can be adjusted
+		Vec3(0, 0, 0),  // rot
+		scale
+	);
+	m_vRigidbodies.push_back(sideHolderBack);
+	structure.addSpring(circlePartsAmount + 2, circlePartsAmount, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);
+	structure.addRigidbody(sideHolderBack);
+	*/
 	// springs
 	for (int i = 0; i < circlePartsAmount; i++) {
-		structure.addSpring(i, (i+1)%circlePartsAmount, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);
-		structure.addSpring(circlePartsAmount, i, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);  // middle holder
+		// to the next in line
+		structure.addSpring(i, (i+1)%circlePartsAmount, Vec3(0, 0, 0), Vec3(0, 0, 0), 2*3.1415962* circleSize / circlePartsAmount, springStrength);
+		// middle holder
+		//structure.addSpring(circlePartsAmount, i, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);  
+		// side holders
+		//structure.addSpring(circlePartsAmount + 1, i, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);
+		//structure.addSpring(circlePartsAmount + 2, i, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);
 	}
 
 	m_vSpringStructures.push_back(structure);
