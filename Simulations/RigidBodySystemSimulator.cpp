@@ -405,20 +405,21 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 
 
-
+	// ----------------------------------------------
 	// Daniel added: rubber ball / maybe ring of death
 	structure = SpringStructure();
 	structure.setExternalForce(Vec3(m_fGravity * 3, 0, 0));
 
 	float circleSize = 0.5;  // radius
-	int circlePartsAmount = 10;
+	int circlePartsAmount = 10;  // how many corners should the ring have
 	int springStrength = 40;
+	// offsets = where should it start from
 	float offsetX = -3.5;
 	float offsetY = 1;
 	float offsetZ = 0;
 	int mass = 1;
-	float possibleSinglePartSize = circleSize * 2 / circlePartsAmount;
-	Vec3 scale = Vec3(possibleSinglePartSize, possibleSinglePartSize * 2, possibleSinglePartSize);
+	float possibleSinglePartSize = circleSize * 2 / circlePartsAmount;  // scale fits to amount of corners and radius
+	Vec3 scale = Vec3(possibleSinglePartSize, possibleSinglePartSize * 2, possibleSinglePartSize);  // scale of single corner
 	// corners (RBs)
 	for (int i = 0; i < circlePartsAmount; i++) {
 		float curX = cos(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
@@ -477,6 +478,10 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	}
 
 	m_vSpringStructures.push_back(structure);
+
+	// Daniel code end
+	// ----------------------------------------------
+
 }
 
 /* OLD VERSION :
