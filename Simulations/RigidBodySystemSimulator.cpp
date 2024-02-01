@@ -408,18 +408,19 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	// ----------------------------------------------
 	// Daniel added: rubber ball / maybe ring of death
 	structure = SpringStructure();
-	structure.setExternalForce(Vec3(m_fGravity * 3, 0, 0));
+	// structure.setExternalForce(Vec3(m_fGravity * 3, 0, 0));
+	structure.setExternalForce(Vec3(0, -m_fGravity, 0));
 
 	float circleSize = 0.5;  // radius
-	int circlePartsAmount = 10;  // how many corners should the ring have
-	int springStrength = 40;
+	int circlePartsAmount = 5;  // how many corners should the ring have
+	int springStrength = 80;
 	// offsets = where should it start from
 	float offsetX = -3.5;
 	float offsetY = 1;
 	float offsetZ = 0;
-	int mass = 1;
+	float mass = 10;
 	float possibleSinglePartSize = circleSize * 2 / circlePartsAmount;  // scale fits to amount of corners and radius
-	Vec3 scale = Vec3(possibleSinglePartSize, possibleSinglePartSize * 2, possibleSinglePartSize);  // scale of single corner
+	Vec3 scale = Vec3(possibleSinglePartSize, possibleSinglePartSize, 4*possibleSinglePartSize);  // scale of single corner
 	// corners (RBs)
 	for (int i = 0; i < circlePartsAmount; i++) {
 		float curX = cos(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
@@ -427,7 +428,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 		Rigidbody* circlePart = new Rigidbody("RubberBallPart_" + to_string(i), &m_SimulationParameters,
 			mass, // mass
-			Vec3(curX + offsetX, 0 + offsetY, curY + offsetZ),  // pos   // the +3 is just for some initial falling height. can be adjusted
+			Vec3(curX + offsetX, curY + offsetY, 0 + offsetZ),  // pos
 			Vec3(0, 0, 0),  // rot
 			scale
 		);
@@ -469,9 +470,12 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	// springs
 	for (int i = 0; i < circlePartsAmount; i++) {
 		// to the next in line
-		structure.addSpring(i, (i+1)%circlePartsAmount, Vec3(0, 0, 0), Vec3(0, 0, 0), 2*3.1415962* circleSize / circlePartsAmount, springStrength);
+		structure.addSpring(i, (i + 1) % circlePartsAmount, Vec3(0, 0, 0.5), Vec3(0, 0, 0.5), 2 * M_PI * circleSize / circlePartsAmount, springStrength);
+		structure.addSpring(i, (i + 1) % circlePartsAmount, Vec3(0, 0, -0.5), Vec3(0, 0, -0.5), 2 * M_PI * circleSize / circlePartsAmount, springStrength);
+
 		// middle holder
-		structure.addSpring(circlePartsAmount, i, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);  
+		structure.addSpring(circlePartsAmount, i, Vec3(0, 0, 0.5), Vec3(0, 0, 0.5), springStrength);
+		structure.addSpring(circlePartsAmount, i, Vec3(0, 0, -0.5), Vec3(0, 0, -0.5), springStrength);
 		// side holders
 		//structure.addSpring(circlePartsAmount + 1, i, Vec3(0, 0, 0), Vec3(0, 0, 0), sqrt(circleSize * circleSize * 2), springStrength);
 		//structure.addSpring(circlePartsAmount + 2, i, Vec3(0, 0, 0), Vec3(0, 0, 0), sqrt(circleSize * circleSize * 2), springStrength);
