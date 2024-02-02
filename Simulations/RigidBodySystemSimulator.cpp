@@ -404,31 +404,31 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	m_vSpringStructures.push_back(structure);
 
 
-
+	/*
 	// ----------------------------------------------
 	// Daniel added: rubber ball / maybe ring of death
 	structure = SpringStructure();
-	// structure.setExternalForce(Vec3(m_fGravity * 3, 0, 0));
-	structure.setExternalForce(Vec3(0, -m_fGravity, 0));
+	structure.setExternalForce(Vec3(0, 0, -m_fGravity * 10));
+	//structure.setExternalForce(Vec3(0, -m_fGravity, 0));
 
-	float circleSize = 0.5;  // radius
-	int circlePartsAmount = 5;  // how many corners should the ring have
+	float circleSize = 0.7;  // radius
+	int circlePartsAmount = 10;  // how many corners should the ring have
 	int springStrength = 80;
 	// offsets = where should it start from
-	float offsetX = -3.5;
-	float offsetY = 1;
-	float offsetZ = 0;
+	float offsetX = 0.5;
+	float offsetY = 0.5;
+	float offsetZ = 5;
 	float mass = 10;
 	float possibleSinglePartSize = circleSize * 2 / circlePartsAmount;  // scale fits to amount of corners and radius
-	Vec3 scale = Vec3(possibleSinglePartSize, possibleSinglePartSize, 4*possibleSinglePartSize);  // scale of single corner
+	Vec3 scale = Vec3(possibleSinglePartSize, possibleSinglePartSize, possibleSinglePartSize);  // scale of single corner
 	// corners (RBs)
 	for (int i = 0; i < circlePartsAmount; i++) {
 		float curX = cos(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
-		float curY = sin(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
+		float curZ = sin(2 * M_PI * i / (float)circlePartsAmount) * circleSize;
 
 		Rigidbody* circlePart = new Rigidbody("RubberBallPart_" + to_string(i), &m_SimulationParameters,
 			mass, // mass
-			Vec3(curX + offsetX, curY + offsetY, 0 + offsetZ),  // pos
+			Vec3(curX + offsetX, 0 + offsetY, curZ + offsetZ),  // pos
 			Vec3(0, 0, 0),  // rot
 			scale
 		);
@@ -446,7 +446,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	);  
 	m_vRigidbodies.push_back(middleHolder);
 	structure.addRigidbody(middleHolder);
-	/*
+	
 	// side holders
 	Rigidbody* sideHolderFront = new Rigidbody("RubberBallMiddle", &m_SimulationParameters,
 		mass, // mass
@@ -466,7 +466,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	m_vRigidbodies.push_back(sideHolderBack);
 	structure.addSpring(circlePartsAmount + 2, circlePartsAmount, Vec3(0, 0, 0), Vec3(0, 0, 0), circleSize, springStrength);
 	structure.addRigidbody(sideHolderBack);
-	*/
+	
 	// springs
 	for (int i = 0; i < circlePartsAmount; i++) {
 		// to the next in line
@@ -485,7 +485,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 
 	// Daniel code end
 	// ----------------------------------------------
-
+	*/
 }
 
 /* OLD VERSION :
