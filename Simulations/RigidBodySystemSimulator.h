@@ -12,11 +12,10 @@
 
 #define TESTCASEUSEDTORUNTEST 2
 
-#define TEST_DEMO 0
-#define ANGRY_BIRDS_DEMO 1
-#define SPRINGS_DEMO 2
+#define ANGRY_BIRDS_DEMO 0
+#define SPRINGS_DEMO 1
+#define EMPTY_SCENE_DEMO 2
 #define COLLISIONS_DEMO 3
-
 
 class RigidBodySystemSimulator:public Simulator {
 public:
@@ -92,7 +91,7 @@ private:
 			collisionDepth(info.depth) {}
 	};
 
-	void setupTestDemo();
+	void setupEmptyDemo();
 	void setupAngryBirdsDemo();
 	void setupSpringsDemo();
 	

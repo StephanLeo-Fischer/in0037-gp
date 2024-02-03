@@ -4,6 +4,10 @@
 extern Simulator* g_pSimulator;
 extern float g_fTimestep;
 
+// If this is defined, all the simulation parameters (air friction, etc...) can 
+// be changed dynamically using the UI:
+// #define UI_SIMULATION_PARAMETERS
+
 RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(1, 15) {
 	// UI Attributes
 	m_prevmouse = { 0, 0 };
@@ -15,6 +19,7 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(1, 15) {
 	// Data Attributes
 	g_fTimestep = 0.005;
 
+	// Default simulation parameters, that are the most stable:
 	m_SimulationParameters = {};
 	m_SimulationParameters.collisionFactor = 0.2;
 
@@ -32,19 +37,23 @@ RigidBodySystemSimulator::RigidBodySystemSimulator() : cannon(1, 15) {
 	m_SimulationParameters.sqMinimumLinearVelocity = 0.05;
 	m_SimulationParameters.sqMinimumAngularVelocity = 0.035;
 
-	cannon.addBezierPoint(Vec3(-4, 0, -4), Vec3(1, 0, 0));
+	// Define the path followed by the cannon:
+	cannon.addBezierPoint(Vec3(-4, 0, -2), Vec3(0, 0, -1));
+	cannon.addBezierPoint(Vec3(-2, 0, -4), Vec3(1, 0, 0));
 	cannon.addBezierPoint(Vec3(2, 0, -4),  Vec3(1, 0, 0));
 	cannon.addBezierPoint(Vec3(4, 0, -2),  Vec3(0, 0, 1));
 	cannon.addBezierPoint(Vec3(4, 0, 2),   Vec3(0, 0, 1));
-	cannon.addBezierPoint(Vec3(2, 0, 4),   Vec3(-1, 0, 0));
-	cannon.addBezierPoint(Vec3(-3, 0, 1), Vec3(-1, 0, -1));
+	cannon.addBezierPoint(Vec3(1.5, 0, 3),   Vec3(-1, 0, 0));
+	cannon.addBezierPoint(Vec3(-1, 0, 2), Vec3(0, 0, -1));
+	cannon.addBezierPoint(Vec3(-2, 0, 0), Vec3(-1, 0, 0));
+	cannon.addBezierPoint(Vec3(-4, 0, -2), Vec3(0, 0, -1));
 }
 
 const char* RigidBodySystemSimulator::getTestCasesStr() {
 	return
-		"Test demo,"
 		"Angry birds demo,"
 		"Springs demo,"
+		"Empty scene demo,"
 		"Collisions debug,";
 }
 
@@ -54,10 +63,14 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 	this->DUC = DUC;
 	switch (m_iTestCase)
 	{
-	case TEST_DEMO:
 	case ANGRY_BIRDS_DEMO:
 	case SPRINGS_DEMO:
+	case EMPTY_SCENE_DEMO:
 		TwAddVarRW(DUC->g_pTweakBar, "Collision factor", TW_TYPE_DOUBLE, &m_SimulationParameters.collisionFactor, "min=0 max=1 step=0.01");
+		
+#ifdef UI_SIMULATION_PARAMETERS
+		// All the simulation parameters (see Rigidbody.h for an explanation about how to use them:
+		
 		TwAddVarRW(DUC->g_pTweakBar, "Air friction", TW_TYPE_DOUBLE, &m_SimulationParameters.airFriction, "min=0 max=0.5 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Objects friction", TW_TYPE_DOUBLE, &m_SimulationParameters.objectFriction, "min=0 max=0.5 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Minimum impulse", TW_TYPE_DOUBLE, &m_SimulationParameters.minimumImpulse, "min=0 step=0.01");
@@ -66,10 +79,10 @@ void RigidBodySystemSimulator::initUI(DrawingUtilitiesClass* DUC)
 		TwAddVarRW(DUC->g_pTweakBar, "Max Angular correction speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxAngularCorrectionSpeed, "min=0 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Max collision speed", TW_TYPE_DOUBLE, &m_SimulationParameters.maxCollidingSpeed, "min=0 step=0.01");
 		TwAddVarRW(DUC->g_pTweakBar, "Depth target", TW_TYPE_DOUBLE, &m_SimulationParameters.depthTarget, "min=0 step=0.001");
-
 		TwAddVarRW(DUC->g_pTweakBar, "Min Linear velocity", TW_TYPE_DOUBLE, &m_SimulationParameters.sqMinimumLinearVelocity, "min=0 step=0.001");
 		TwAddVarRW(DUC->g_pTweakBar, "Min Angular velocity", TW_TYPE_DOUBLE, &m_SimulationParameters.sqMinimumAngularVelocity, "min=0 step=0.001");
-
+#endif
+		
 		TwAddVarRW(DUC->g_pTweakBar, "Gravity", TW_TYPE_FLOAT, &m_fGravity, "min=0");
 
 		TwAddVarRW(DUC->g_pTweakBar, "Fire scenario", TW_TYPE_INT32, &m_iTestScenario, "min=0 max=5");
@@ -132,23 +145,25 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 
 	switch (m_iTestCase)
 	{
-	case TEST_DEMO:
-		cout << "Switch to Test demo: Fire rigidbodies to see the simulator stability !" << endl;
-		setupTestDemo();
-		break;
-
 	case ANGRY_BIRDS_DEMO:
 		cout << "Switch to Angry Birds Demo !" << endl;
 		setupAngryBirdsDemo();
 		break;
 
 	case SPRINGS_DEMO:
-		cout << "Switch to Springs demo !" << endl;
+		cout << "Switch to Springs demo: scene with a single big trampoline !" << endl;
 		setupSpringsDemo();
 		break;
 
+	case EMPTY_SCENE_DEMO:
+		cout << "Switch to Empty Scene demo: Fire rigidbodies using different scenarios to see the simulator stability !" << endl;
+		setupEmptyDemo();
+		break;
+
 	case COLLISIONS_DEMO:
-		cout << "Switch to Collision debug: See the collision point returned by SAT !" <<endl;
+		cout << "Switch to Collision debug: See the collision point (yellow) and normal (red line) returned by SAT in real time !" << endl;
+		cout << "You can use the arrow keys to rotate the cube, and the keys Q,S,D,Z,W,X to move it." << endl;
+
 		break;
 	}
 }
@@ -157,11 +172,14 @@ void RigidBodySystemSimulator::notifyCaseChanged(int testCase) {
 void RigidBodySystemSimulator::externalForcesCalculations(float timeElapsed){}
 
 void RigidBodySystemSimulator::simulateTimestep(float timestep) {
+	if (m_iTestCase == COLLISIONS_DEMO)
+		return;
 
-	// Update the orientation of the cannon according to key presses:
-	if (DXUTIsKeyDown(0x46))		// If the key 'F' is pressed
+	// If the key 'F' is pressed, fire a rigidbody in the scene:
+	if (DXUTIsKeyDown(0x46))
 		fireRigidbody();
 	
+	// Rotate the cannon using the arrow keys UP and DOWN:
 	if (DXUTIsKeyDown(VK_UP))
 		cannon.RotateUp();
 	if (DXUTIsKeyDown(VK_DOWN))
@@ -170,23 +188,16 @@ void RigidBodySystemSimulator::simulateTimestep(float timestep) {
 	// Update the position of the cannon:
 	cannon.update(timestep);
 
-	switch (m_iTestCase)
-	{
-	case SPRINGS_DEMO:
-	case TEST_DEMO:
-	case ANGRY_BIRDS_DEMO:
-		for (auto& s : m_vSpringStructures)
-			s.updateForces();
+	// Compute the forces between the rigidbodies in spring structures:
+	for (auto& s : m_vSpringStructures)
+		s.updateForces();
 
-		for (Rigidbody* r : m_vRigidbodies)
-			r->timestepEuler(timestep);
+	// Update all the rigidbodies in the scene using euler timestep:
+	for (Rigidbody* r : m_vRigidbodies)
+		r->timestepEuler(timestep);
 
-		manageCollisions(timestep);
-		break;
-
-	default:
-		break;
-	}
+	// Manage the collisions between all the rigidbodies in the scene:
+	manageCollisions(timestep);
 }
 
 // This function is called when the mouse is clicked, 
@@ -274,14 +285,15 @@ void RigidBodySystemSimulator::setVelocityOf(int i, Vec3 velocity) {
 	m_vRigidbodies.at(i)->setLinearVelocity(velocity);
 }
 
-
-void RigidBodySystemSimulator::setupTestDemo()
+// Setup an empty scene with just the ground:
+void RigidBodySystemSimulator::setupEmptyDemo()
 {
 	Rigidbody* ground = new Rigidbody("Ground", & m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
 	ground->setKinematic(true);
 	m_vRigidbodies.push_back(ground);
 }
 
+// Setup the main scene with the angry birds game:
 void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	// Use this vector to move all the scene:
 	const Vec3 scenePosition = Vec3(1, 0, 0);
@@ -488,56 +500,7 @@ void RigidBodySystemSimulator::setupAngryBirdsDemo() {
 	*/
 }
 
-/* OLD VERSION :
-void RigidBodySystemSimulator::setupAngryBirdsDemo() {
-	Rigidbody* ground = new Rigidbody(&m_SimulationParameters, 1, Vec3(0, -0.05, 0), Vec3(0, 0, 0), Vec3(10, 0.1, 10));
-	ground->setKinematic(true);
-	m_vRigidbodies.push_back(ground);
-
-	const float mass = 1;
-
-	// For testing: create a kind of angry birds game:
-	Rigidbody* planks[10]{
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(-1, 0.1, 0), Vec3(0.0), Vec3(0.1, 0.2, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(0, 0.1, 0), Vec3(0.0), Vec3(0.1, 0.2, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(-1, 0.5, 0), Vec3(0.0), Vec3(0.1, 0.4, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(0, 0.5, 0), Vec3(0.0), Vec3(0.1, 0.4, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(0.6, 0.4, 0), Vec3(0.0), Vec3(0.1, 0.4, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(1.1, 0.4, 0), Vec3(0.0), Vec3(0.1, 0.4, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(0.6, 0.65, 0), Vec3(0.0), Vec3(0.4, 0.1, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(1.275, 0.65, 0), Vec3(0.0), Vec3(0.65, 0.1, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(-0.5, 0.25, 0), Vec3(0.0), Vec3(1.2, 0.1, 0.1)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(-0.5, 0.75, 0), Vec3(0.0), Vec3(1.2, 0.1, 0.1)),
-	};
-	
-	for (int i = 0; i < 10; i++) {
-		planks[i]->color = Vec3(120, 57, 0) / 255.0f;
-		planks[i]->setForce(Vec3(0, -m_fGravity, 0));
-		m_vRigidbodies.push_back(planks[i]);
-	}
-	
-	Rigidbody* ground1 = new Rigidbody(&m_SimulationParameters, mass, Vec3(1, 0.1, 0), Vec3(0.0), Vec3(1.2, 0.2, 0.1));
-	Rigidbody* ground2 = new Rigidbody(&m_SimulationParameters, mass, Vec3(1.5, 0.4, 0), Vec3(0.0), Vec3(0.2, 0.4, 0.1));
-	ground1->setKinematic(true);
-	ground2->setKinematic(true);
-	m_vRigidbodies.push_back(ground1);
-	m_vRigidbodies.push_back(ground2);
-
-	Rigidbody* pigs[5]{
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(-0.75, 0.4, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(-0.25, 0.4, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(-0.5, 0.9, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(0.6, 0.8, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
-		new Rigidbody(&m_SimulationParameters, mass, Vec3(1.2, 0.8, 0), Vec3(0.0), Vec3(0.2, 0.2, 0.2)),
-	};
-
-	for (int i = 0; i < 5; i++) {
-		pigs[i]->color = Vec3(0, 120, 0) / 255.0f;
-		pigs[i]->setForce(Vec3(0, -m_fGravity, 0));
-		m_vRigidbodies.push_back(pigs[i]);
-	}
-}*/
-
+// Setup a scene with the ground and a trampoline (using spring structures):
 void RigidBodySystemSimulator::setupSpringsDemo()
 {
 	// Create the ground:
@@ -585,61 +548,6 @@ void RigidBodySystemSimulator::setupSpringsDemo()
 
 	m_vSpringStructures.push_back(structure);
 }
-
-/*
-void RigidBodySystemSimulator::manageCollisions(double timestep)
-{
-	// First, find the collisions between all the rigidbodies:
-	vector<Collision> collisions;
-	for (int i = 0; i < m_vRigidbodies.size(); i++) {
-		for (int j = i + 1; j < m_vRigidbodies.size(); j++) {
-			Rigidbody* r1 = m_vRigidbodies[i];
-			Rigidbody* r2 = m_vRigidbodies[j];
-
-			// If both objects are idle, we don't need to recompute the 
-			// collision between them (it will be the same that in 
-			// the previous frame) !
-			if (r1->isIdle() && r2->isIdle())
-				continue;
-
-			// Else, we compute the collision between the two objects:
-			CollisionInfo collision = Rigidbody::computeCollision(r1, r2);
-
-			if (collision.isValid) {
-				collisions.push_back(Collision(i, j, collision));
-				r1->addCollider(r2);
-				r2->addCollider(r1);
-			}
-		}
-	}
-
-	// Recompute which rigidbodies are in idle state or not. As soon as the set of colliding objects
-	// of a rigidbody changes, all the colliding objects should loose their idle state:
-	for (Rigidbody* r : m_vRigidbodies)
-		r->checkKeepIdleState();
-
-	// Now we can compute the impulse of each collision, but there is no need to compute impulses
-	// between rigidbodies in idle state:
-	for (int i = 0; i < collisions.size(); i++) {
-		Rigidbody* r1 = m_vRigidbodies[collisions[i].i1];
-		Rigidbody* r2 = m_vRigidbodies[collisions[i].i2];
-
-		if (!r1->isIdle() || !r2->isIdle()) {
-			manageCollision(r1, r2, &collisions[i], timestep);
-		}
-	}
-
-	// Check which rigidbodies are moving after the impulse:
-	for (Rigidbody* r : m_vRigidbodies)
-		r->checkIsMooving();
-
-	for (Rigidbody* r : m_vRigidbodies)
-		r->checkEnterIdleState();
-
-	// Finally, update the colliders of the rigidbodies:
-	for (Rigidbody* r : m_vRigidbodies)
-		r->updateColliders();
-}*/
 
 void RigidBodySystemSimulator::manageCollisions(double timestep)
 {
@@ -735,6 +643,7 @@ void RigidBodySystemSimulator::manageCollision(Rigidbody* r1, Rigidbody* r2, con
 	}
 }
 
+// Compute the number of objects between each rigidbody and the nearest kinematic object:
 void RigidBodySystemSimulator::computeDistancesToKinematic() {
 	std::unordered_set<Rigidbody*> visited;
 	std::queue<Rigidbody*> fifo;
@@ -819,9 +728,6 @@ void RigidBodySystemSimulator::fireRigidbody()
 	}
 
 	else if (m_iTestScenario == 5) {	// Throw boxes without velocity above the origin
-		//Vec3 position(0.4 * randFloat(eng) - 0.2, 5, 0.4 * randFloat(eng) - 0.2);
-		//Vec3 rotation(90 * randFloat(eng), 90 * randFloat(eng), 90 * randFloat(eng));
-
 		Rigidbody* box = new Rigidbody("Box_" + to_string(m_vRigidbodies.size()), &m_SimulationParameters, 1, Vec3(0, 2, 0), 0.0, Vec3(1, 0.5, 1));
 		box->color = Vec3(1, 1, 0);
 		box->setForce(Vec3(0, -m_fGravity, 0));
